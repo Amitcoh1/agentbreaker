@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { Copy } from "lucide-react";
 import type { SpecNode } from "@/lib/graphspec";
 import { isKnownModel, perCallUsd, usd } from "@/lib/pricing";
+import AiSuggest from "./AiSuggest";
 
 const INPUT =
   "mt-1 w-full rounded border border-border bg-surface px-2 py-1 text-sm outline-none focus:border-primary";
@@ -146,6 +147,10 @@ export default function Inspector({
 
       {(node.type === "start" || node.type === "end") && (
         <p className="text-xs text-muted">Nothing else to configure.</p>
+      )}
+
+      {(node.type === "model" || node.type === "tool" || node.type === "router") && (
+        <AiSuggest node={node} />
       )}
     </div>
   );

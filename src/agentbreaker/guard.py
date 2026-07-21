@@ -30,6 +30,7 @@ from typing import Literal
 
 from langchain_core.callbacks import BaseCallbackHandler
 
+from agentbreaker.control import ControlPoller
 from agentbreaker.events import EventLog
 from agentbreaker.ledger import InsufficientBudget, Ledger, ReservationId
 from agentbreaker.meter import (
@@ -108,6 +109,8 @@ class _Run:
     config: dict | None = None
     report_path: Path | None = None
     sink: HttpEventSink | None = None
+    control: ControlPoller | None = None
+    remote_action: str | None = None  # "pause" | "kill" from the dashboard
     calls: dict[str, _Call] = field(default_factory=dict)
     side_effect_fired: list[str] = field(default_factory=list)
 
@@ -158,6 +161,12 @@ class _BudgetHandler(BaseCallbackHandler):
     # ---- gate (runs before every model/tool hop) ----
     def _gate(self) -> None:
         tw = self._run.tripwire
+        if self._run.control is not None and not tw.tripped:
+            cmd = self._run.control.command
+            if cmd:
+                self._run.remote_action = cmd
+                self._run.eventlog.emit("control", detail={"command": cmd})
+                tw.trip(TripReason.REMOTE)
         if tw.tripped:
             self._trip(tw.reason)
         if tw.hops >= tw.max_hops:
@@ -331,6 +340,10 @@ class GuardedApp:
         self.prices = PriceTable.load(unknown_model=unknown_model)
         self.report_dir = Path(report_dir)
         self.report_to = report_to
+        # Live-control endpoint: env override, else derive from report_to (/ingest -> /control)
+        self._control_url = os.getenv("AGENTBREAKER_CONTROL_URL")
+        if not self._control_url and report_to and "/" in report_to:
+            self._control_url = f"{report_to.rsplit('/', 1)[0]}/control"
         self._runs: dict[str, _Run] = {}
         self._resumable: dict[str, _Run] = {}
         self.last_report_path: Path | None = None
@@ -376,6 +389,8 @@ class GuardedApp:
         return result
 
     def _finalize(self, run: _Run) -> Path:
+        if run.control is not None:
+            run.control.stop()
         html_path, summary = write_report(run.run_id, run.eventlog.path, self.report_dir)
         run.report_path = html_path
         self.last_report_path = html_path
@@ -429,7 +444,12 @@ class GuardedApp:
                 "sub_budgets": {k: _to_micro(v) for k, v in self.sub_budgets.items()},
             },
         )
-        run = _Run(run_id, ledger, tripwire, eventlog, sink=sink)
+        control = None
+        if self.report_to and self._control_url:
+            control = ControlPoller(
+                self._control_url, run_id, key=os.getenv("AGENTBREAKER_INGEST_KEY")
+            )
+        run = _Run(run_id, ledger, tripwire, eventlog, sink=sink, control=control)
         run.handler = _BudgetHandler(self, run)
         return run
 
@@ -448,7 +468,11 @@ class GuardedApp:
 
     def _handle_trip(self, run: _Run, reason: TripReason):
         spent_usd = run.ledger.total_spent() / 1_000_000
-        if self.on_trip == "kill":
+        # A remote command's action (pause|kill) overrides the configured on_trip.
+        action = run.remote_action or self.on_trip
+        if action in ("pause", "degrade") and getattr(self.app, "checkpointer", None) is None:
+            action = "kill"  # can't preserve state without a checkpointer
+        if action == "kill":
             report_path = self._finalize(run)
             raise BudgetKilled(spent_usd, reason.value, report_path, list(run.side_effect_fired))
         checkpoint_id = self._checkpoint_id(run.config)

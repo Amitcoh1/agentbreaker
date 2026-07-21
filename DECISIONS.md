@@ -130,3 +130,19 @@ Per spec §9.1: record decisions made where the spec was ambiguous or silent.
   runs on later. This keeps Phase 5 to the demonstrable core (list + live timeline + share).
 - **Cloud is not deployed** — `cloud/` ships the migration, edge function, and Next.js app
   plus a runbook; provisioning a Supabase project and Vercel deploy are user-run.
+
+## Live control (dashboard pause/kill)
+
+- **A `ControlPoller` daemon thread** (`control.py`) polls a control endpoint (best-effort,
+  stdlib urllib — same shape as the sink) and stashes any `pause`/`kill` command on a
+  thread-safe slot. The hop **gate** reads the slot and trips with `TripReason.REMOTE`, so a
+  remote kill is applied **at the next hop boundary** — never mid-call. Same guarantee as a
+  local trip.
+- **The command's action overrides `on_trip`** in `_handle_trip`: a dashboard `kill` kills
+  even if the guard was built with `on_trip="pause"`. A remote `pause` with no checkpointer
+  falls back to `kill` (can't preserve state), mirroring the construction-time rule.
+- **Control URL is derived** from `report_to` (`…/ingest` → `…/control`) or set via
+  `AGENTBREAKER_CONTROL_URL`. The poller authenticates with the ingest key; **issuing** a
+  command from the dashboard requires a separate `CONTROL_KEY`, so a public/unlisted run URL
+  can't be used to kill someone's agent.
+- **Poller stops on finalize** and after capturing one command (no busy-loop).

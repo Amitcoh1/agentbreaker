@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agentbreaker.dev/graph.schema.json",
+  "title": "AgentBreaker graph spec",
+  "description": "Editor-support schema. The authoritative, semantic checks (budget-sum, connectivity, router labels, cycles) live in agentbreaker.graphspec.validate — this only covers structure.",
+  "type": "object",
+  "required": ["version", "config", "nodes", "edges"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {"const": "1"},
+    "config": {
+      "type": "object",
+      "required": ["budget_usd"],
+      "additionalProperties": false,
+      "properties": {
+        "budget_usd": {"type": "number", "exclusiveMinimum": 0},
+        "max_hops": {"type": "integer", "minimum": 1},
+        "ttl_seconds": {"type": "number", "minimum": 0},
+        "velocity_usd_per_min": {"type": "number", "minimum": 0},
+        "on_trip": {"enum": ["pause", "kill"]}
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "type": {"enum": ["start", "end", "model", "tool", "router"]},
+          "model": {"type": "string"},
+          "max_tokens": {"type": "integer", "minimum": 1},
+          "sub_budget_usd": {"type": "number", "minimum": 0},
+          "name": {"type": "string"},
+          "side_effecting": {"type": "boolean"},
+          "condition": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source", "target"],
+        "additionalProperties": false,
+        "properties": {
+          "source": {"type": "string"},
+          "target": {"type": "string"},
+          "condition": {"type": "string"}
+        }
+      }
+    }
+  }
+}

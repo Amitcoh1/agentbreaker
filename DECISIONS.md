@@ -21,3 +21,25 @@ Per spec §9.1: record decisions made where the spec was ambiguous or silent.
   for ~15 top models; spec §8 requires re-verifying against provider pages the week of
   launch. `default_rate` set to a deliberately conservative 5/15 so unknown-but-metered
   models are never under-counted.
+
+## Phase 1
+
+- **`threading.Lock`, not `asyncio.Lock`.** §9.3's `Ledger` methods are sync
+  (`def reserve`, not `async def`). A `threading.Lock` protects both thread-pool executors
+  and asyncio tasks (critical sections take no `await`, so they're atomic under a single
+  event loop anyway); an `asyncio.Lock` would force async signatures that contradict §9.3.
+  Spec §5 says "asyncio locks" — overridden here for correctness against the API contract.
+- **One global lock** (ponytail): reserve/reconcile/open are tiny non-blocking sections.
+  Per-account locks only if profiling shows contention.
+- **`reconcile(actual)` records truth even if `actual > estimate`.** Under-counting spend
+  is the exact LiteLLM-class bug we exist to prevent, so we never clamp spend down. The
+  guard's job (Phase 2) is to reserve a real upper bound (`input + max_tokens*out_rate`);
+  if it does, `actual <= estimate` always and the invariant is airtight.
+- **Escrow invariant proven, then property-tested.** A node's local `remaining >= 0`
+  telescopes to the global `Σspent + Σreserved <= root_allocation` because child
+  allocations cancel against their parent's `child_alloc` term. Hypothesis checks it holds
+  after every op; a threaded test checks siblings racing can't overspend.
+- **Top-up bubbles up a linear ancestor chain.** Max grant = Σ(remaining) of strict
+  ancestors; `_grant` funds a node from its parent, recursively topping the parent from the
+  grandparent when short. Root can't be topped up (no funder). Policies: `deny` | `auto` |
+  `callable(node_id, requested, available) -> granted` (clamped to available).

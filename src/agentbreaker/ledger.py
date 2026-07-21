@@ -161,6 +161,15 @@ class Ledger:
                 return 0
             return self._accounts[self._root_id].allocation_microusd
 
+    def add_root_budget(self, amount_microusd: int) -> None:
+        """Raise the root ceiling — used on resume() to grant extra budget."""
+        if amount_microusd < 0:
+            raise ValueError("amount must be >= 0")
+        with self._lock:
+            if self._root_id is None:
+                raise UnknownAccount("root")
+            self._accounts[self._root_id].allocation_microusd += amount_microusd
+
     # ---- top-up (bubbles up the ancestor chain per policy) ----
     def request_topup(
         self, node_id: str, amount_microusd: int, policy: TopupPolicy = "deny"

@@ -43,3 +43,35 @@ Per spec §9.1: record decisions made where the spec was ambiguous or silent.
   ancestors; `_grant` funds a node from its parent, recursively topping the parent from the
   grandparent when short. Root can't be topped up (no funder). Policies: `deny` | `auto` |
   `callable(node_id, requested, available) -> granted` (clamped to available).
+
+## Phase 2
+
+- **Interception = one LangChain callback handler injected into the run config.** It
+  propagates down the whole run tree (nodes, tools, sub-agents, subgraphs) via
+  langchain-core's contextvars, so a node's `model.invoke()` inherits it with no manual
+  wiring — this *is* the "context propagation works with subgraphs" deliverable, for free.
+- **Enforcement is at the hop boundary.** The gate runs at the START of each model/tool
+  call (`on_chat_model_start` / `on_tool_start`); an in-flight call is never interrupted. A
+  velocity/budget limit crossed at reconcile is marked tripped and enforced at the NEXT gate
+  (matches flow 4.2). TTL/hops are enforced directly at the gate.
+- **`raise_error = True` on the handler** so the gate's internal `_Trip` propagates out of
+  the model call instead of being swallowed. Side effect: LangChain logs `Error in ...
+  callback: _Trip(...)` before re-raising — cosmetic, the trip works. Left as-is.
+- **guard auto-wiring = root + explicit `sub_budgets`.** The ledger supports arbitrary
+  hierarchy (Phase 1), but wiring a full per-node account tree from the run graph is
+  deferred; a call bills its node's sub-budget account if named, else the root pool. Named
+  accounts can still `request_topup` under the configured policy.
+- **`degrade` falls back to a graceful pause** (warned at construction). Transparent
+  model-swap isn't reachable from a callback when `guard()` only holds the *compiled* app —
+  the node already owns its model instance. A future `budget_model()` wrapper (opt-in at
+  graph-build time) can do real swaps; until then degrade pauses instead of overspending.
+- **Added `BudgetKilled`** (spec defined only `BudgetPaused`). `kill` is terminal and not
+  resumable, so it needs its own exception; it carries `side_effects_fired`.
+- **`side_effecting` via tool tags/metadata** (`tags=["side_effecting"]` or
+  `metadata={"side_effecting": True}`), plus a `mark_side_effecting(tool)` helper — because
+  the frozen `guard()` signature (§9.3) has no parameter for it.
+- **Reserve = upper bound.** estimate uses the call's `max_tokens` or
+  `DEFAULT_MAX_OUTPUT_TOKENS=1024`; reconcile bills the provider-reported usage (local count
+  is the cross-check, and the streaming fallback when usage is absent).
+- **tiktoken `o200k_base` approximates non-OpenAI tokenizers** — good enough for estimates;
+  reconcile corrects to real usage anyway.

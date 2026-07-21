@@ -15,8 +15,12 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
 ]
-# Runtime deps are added per phase (see DECISIONS.md). Phase 0 needs none.
-dependencies = []
+# Runtime deps are added per phase (see DECISIONS.md).
+dependencies = [
+    "langgraph>=0.2",
+    "langchain-core>=0.3",
+    "tiktoken>=0.7",
+]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6", "hypothesis>=6"]

@@ -21,10 +21,15 @@ Everything is in microdollars (int). Concurrency: one lock, sync API — see DEC
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import NewType
+from typing import Literal, NewType
 
 ReservationId = NewType("ReservationId", int)
+
+# "deny" -> grant nothing; "auto" -> grant up to what ancestors can spare;
+# callable(node_id, requested, available) -> granted (clamped to available).
+TopupPolicy = Literal["deny", "auto"] | Callable[[str, int, int], int]
 
 
 class InsufficientBudget(Exception):
@@ -155,3 +160,52 @@ class Ledger:
             if self._root_id is None:
                 return 0
             return self._accounts[self._root_id].allocation_microusd
+
+    # ---- top-up (bubbles up the ancestor chain per policy) ----
+    def request_topup(
+        self, node_id: str, amount_microusd: int, policy: TopupPolicy = "deny"
+    ) -> int:
+        """Try to enlarge node's allocation by pulling slack from its ancestors.
+
+        Returns the granted amount (microUSD), 0 if none. The root cannot be
+        topped up (it has no parent to fund it).
+        """
+        if amount_microusd <= 0:
+            return 0
+        with self._lock:
+            acc = self._require(node_id)
+            if acc.parent_id is None:
+                return 0
+            available = sum(a.remaining() for a in self._ancestors(node_id))
+            if policy == "deny":
+                return 0
+            if policy == "auto":
+                grant = min(amount_microusd, available)
+            elif callable(policy):
+                grant = max(0, min(policy(node_id, amount_microusd, available), available))
+            else:
+                raise ValueError(f"unknown topup policy {policy!r}")
+            if grant > 0:
+                self._grant(node_id, grant)
+            return grant
+
+    def _ancestors(self, node_id: str) -> list[NodeAccount]:
+        chain: list[NodeAccount] = []
+        pid = self._require(node_id).parent_id
+        while pid is not None:
+            parent = self._require(pid)
+            chain.append(parent)
+            pid = parent.parent_id
+        return chain
+
+    def _grant(self, node_id: str, amount: int) -> None:
+        # Enlarge node's allocation by `amount`, funding it from the parent; if the
+        # parent lacks slack, top the parent up first (recurse toward root). Caller
+        # has verified the chain holds enough total slack, so recursion terminates.
+        acc = self._require(node_id)
+        parent = self._require(acc.parent_id)  # never root here: request_topup guards it
+        shortfall = amount - parent.remaining()
+        if shortfall > 0:
+            self._grant(parent.node_id, shortfall)
+        parent.child_alloc_microusd += amount
+        acc.allocation_microusd += amount

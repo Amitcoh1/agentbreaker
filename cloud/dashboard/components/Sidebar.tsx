@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ListChecks, ShieldAlert } from "lucide-react";
+import { Blocks, LayoutDashboard, ListChecks, ShieldAlert } from "lucide-react";
 
 const items = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/runs", label: "Runs", icon: ListChecks },
+  { href: "/builder", label: "Builder", icon: Blocks },
 ];
 
 export default function Sidebar() {

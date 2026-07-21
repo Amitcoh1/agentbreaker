@@ -101,17 +101,47 @@ def test_pause_and_resume(tmp_path):
     assert result["count"] == 2
 
 
-def test_degrade_warns_and_falls_back_to_pause(tmp_path):
-    with pytest.warns(UserWarning, match="graceful pause"):
-        guarded = guard(
-            build(2, MemorySaver()),
-            budget_usd=0.0001,
-            on_trip="degrade",
-            degrade_model="openai/gpt-4o-mini",
-            report_dir=tmp_path,
+def test_degrade_is_not_a_valid_on_trip():
+    with pytest.raises(ValueError, match="pause|kill"):
+        guard(build(2), budget_usd=1.0, on_trip="degrade")  # type: ignore[arg-type]
+
+
+class _BigOutputModel(BaseChatModel):
+    """Returns far more output than DEFAULT_MAX_OUTPUT_TOKENS, with NO max_tokens declared."""
+
+    model: str = "openai/gpt-4o"
+
+    @property
+    def _llm_type(self) -> str:
+        return "big-output"
+
+    def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+        msg = AIMessage(
+            content="ok",
+            usage_metadata={"input_tokens": 100, "output_tokens": 5000, "total_tokens": 5100},
         )
-    with pytest.raises(BudgetPaused):
-        guarded.invoke({"count": 0}, {"recursion_limit": 100})
+        return ChatResult(generations=[ChatGeneration(message=msg)])
+
+
+def test_overshoot_flagged_when_no_max_tokens(tmp_path):
+    model = _BigOutputModel()  # no max_tokens field -> reserve uses the 1024 default, under-counts
+
+    def call(state):
+        model.invoke([HumanMessage(content="hi")])
+        return {"count": state["count"] + 1}
+
+    graph = StateGraph(S)
+    graph.add_node("call", call)
+    graph.add_edge(START, "call")
+    graph.add_conditional_edges(
+        "call", lambda s: END if s["count"] >= 1 else "call", {"call": "call", END: END}
+    )
+    guarded = guard(graph.compile(), budget_usd=100.0, on_trip="kill", report_dir=tmp_path)
+    guarded.invoke({"count": 0})
+
+    run = next(iter(guarded._runs.values()))
+    reconciles = [e for e in run.eventlog.events if e.type == "reconcile"]
+    assert reconciles and any((e.detail or {}).get("overshoot") for e in reconciles)
 
 
 def test_side_effecting_tool_listed_on_kill(tmp_path):

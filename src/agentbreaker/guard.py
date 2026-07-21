@@ -13,16 +13,12 @@ Trip actions:
   - kill  -> stop, finalize report, raise BudgetKilled (lists side-effecting tools fired)
   - pause -> the checkpointer already saved the last good superstep; raise BudgetPaused,
              resume() tops up budget and re-invokes from that checkpoint
-  - degrade -> see DECISIONS: transparent model-swap isn't reachable from a callback when
-             guard() only holds the compiled app, so degrade falls back to a graceful
-             pause (warned at construction) until the model-wrapper path lands.
 """
 
 from __future__ import annotations
 
 import os
 import uuid
-import warnings
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -95,6 +91,7 @@ class _Call:
     model: str
     tokens_in: int
     estimate: int
+    declared_max: bool  # did the call declare max_tokens? (else the reserve may under-count)
     stream: StreamMeter
 
 
@@ -203,6 +200,7 @@ class _BudgetHandler(BaseCallbackHandler):
         model = _model_name(serialized, metadata)
         tokens_in = count_message_tokens(messages, model)
         inv = kwargs.get("invocation_params") or {}
+        declared_max = inv.get("max_tokens") is not None
         max_out = inv.get("max_tokens") or DEFAULT_MAX_OUTPUT_TOKENS
         # cost_microusd may raise UnknownModelError here — i.e. before dispatch, never $0
         estimate = self._g.prices.cost_microusd(model, tokens_in, max_out)
@@ -210,7 +208,7 @@ class _BudgetHandler(BaseCallbackHandler):
         res = self._reserve_or_trip(account, estimate)
         self._run.tripwire.note_hop()
         self._run.calls[run_id] = _Call(res, account, node, model, tokens_in, estimate,
-                                         StreamMeter(model))
+                                         declared_max, StreamMeter(model))
         led = self._run.ledger
         self._run.eventlog.emit(
             "reserve", node=node, parent=parent, model=model, tokens_in=tokens_in,
@@ -253,7 +251,11 @@ class _BudgetHandler(BaseCallbackHandler):
         led.reconcile(call.res_id, actual)
         tw = self._run.tripwire
         tw.record_spend(actual)
-        detail = {"discrepancy": flags} if flags else {}
+        detail: dict = {"discrepancy": flags} if flags else {}
+        # Cap enforced a hop late: the call declared no max_tokens, so the reserve under-counted
+        # and the real cost exceeded it — the receipt flags this so the number isn't a surprise.
+        if actual > call.estimate and not call.declared_max:
+            detail["overshoot"] = {"estimate_microusd": call.estimate, "actual_microusd": actual}
         self._run.eventlog.emit(
             "reconcile", node=call.node, model=call.model, tokens_in=final_in,
             tokens_out=final_out, estimate_microusd=call.estimate, actual_microusd=actual,
@@ -301,28 +303,18 @@ class GuardedApp:
         max_hops: int,
         ttl_seconds: int | None,
         velocity_usd_per_min: float | None,
-        on_trip: Literal["pause", "degrade", "kill"],
-        degrade_model: str | None,
+        on_trip: Literal["pause", "kill"],
         sub_budgets: dict[str, float] | None,
         topup_policy,
         unknown_model: Literal["fail", "default_rate"],
         report_dir: str | Path,
         report_to: str | None,
     ) -> None:
-        if on_trip not in ("pause", "degrade", "kill"):
-            raise ValueError(f"on_trip must be pause|degrade|kill, got {on_trip!r}")
-        if on_trip == "degrade":
-            if degrade_model is None:
-                raise ValueError("on_trip='degrade' requires degrade_model")
-            warnings.warn(
-                "on_trip='degrade' currently falls back to a graceful pause: transparent "
-                "model-swap isn't reachable when guard() only holds the compiled app. "
-                "See DECISIONS.md.",
-                stacklevel=2,
-            )
-        if on_trip in ("pause", "degrade") and getattr(app, "checkpointer", None) is None:
+        if on_trip not in ("pause", "kill"):
+            raise ValueError(f"on_trip must be pause|kill, got {on_trip!r}")
+        if on_trip == "pause" and getattr(app, "checkpointer", None) is None:
             raise ValueError(
-                f"on_trip={on_trip!r} needs the app compiled with a checkpointer "
+                "on_trip='pause' needs the app compiled with a checkpointer "
                 "(e.g. compile(checkpointer=MemorySaver()))"
             )
 
@@ -334,7 +326,6 @@ class GuardedApp:
             _to_micro(velocity_usd_per_min) if velocity_usd_per_min is not None else None
         )
         self.on_trip = on_trip
-        self.degrade_model = degrade_model
         self.sub_budgets = sub_budgets or {}
         self.topup_policy = topup_policy
         self.prices = PriceTable.load(unknown_model=unknown_model)
@@ -470,7 +461,7 @@ class GuardedApp:
         spent_usd = run.ledger.total_spent() / 1_000_000
         # A remote command's action (pause|kill) overrides the configured on_trip.
         action = run.remote_action or self.on_trip
-        if action in ("pause", "degrade") and getattr(self.app, "checkpointer", None) is None:
+        if action == "pause" and getattr(self.app, "checkpointer", None) is None:
             action = "kill"  # can't preserve state without a checkpointer
         if action == "kill":
             report_path = self._finalize(run)
@@ -495,8 +486,7 @@ def guard(
     max_hops: int = 100,
     ttl_seconds: int | None = None,
     velocity_usd_per_min: float | None = None,
-    on_trip: Literal["pause", "degrade", "kill"] = "pause",
-    degrade_model: str | None = None,
+    on_trip: Literal["pause", "kill"] = "pause",
     sub_budgets: dict[str, float] | None = None,
     topup_policy: Literal["deny", "auto"] | Callable = "deny",
     unknown_model: Literal["fail", "default_rate"] = "fail",
@@ -505,5 +495,5 @@ def guard(
 ) -> GuardedApp:
     return GuardedApp(
         app, budget_usd, max_hops, ttl_seconds, velocity_usd_per_min, on_trip,
-        degrade_model, sub_budgets, topup_policy, unknown_model, report_dir, report_to,
+        sub_budgets, topup_policy, unknown_model, report_dir, report_to,
     )

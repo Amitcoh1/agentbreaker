@@ -59,11 +59,15 @@ def summarize(events: list[dict]) -> dict:
                 "side_effecting": e.get("side_effecting", False), "discrepancy": None,
             })
 
+    # Status = the LAST terminal event by seq — so a run that paused then resumed to a
+    # finish reads as completed, not paused (trip fires just before pause, so pause wins there).
+    terminal = None
+    for e in events:
+        if e["type"] in ("trip", "pause", "finish"):
+            terminal = e["type"]
+    status = {"trip": "killed", "pause": "paused", "finish": "completed"}.get(terminal, "unknown")
     trip = next((e for e in events if e["type"] == "trip"), None)
-    paused = any(e["type"] == "pause" for e in events)
-    finished = any(e["type"] == "finish" for e in events)
-    status = "paused" if paused else "killed" if trip else "completed" if finished else "unknown"
-    trip_reason = (trip.get("detail") or {}).get("reason") if trip else None
+    trip_reason = (trip.get("detail") or {}).get("reason") if trip and status != "completed" else None
 
     spent_micro = timeline[-1]["cumulative_micro"] if timeline else 0
     cost_hops = sum(1 for t in timeline if t["actual_micro"] > 0)

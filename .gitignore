@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+agentbreaker_reports/
+*.html
+!src/agentbreaker/report/*.html.j2
+.DS_Store

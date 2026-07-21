@@ -109,8 +109,9 @@ Python 3.11+. Core deps: `langgraph`, `langchain-core`, `tiktoken`, `jinja2`.
 - **The overshoot rule:** the guard never interrupts a call mid-flight. If your model has
   **no** `max_tokens`, the reserve estimate can under-count and the cap is enforced one hop
   late (overshoot bounded by a single call). Set `max_tokens` and it stops strictly under.
-- **Prices** (`prices.json`) are bundled for ~15 top models and must be re-verified against
-  provider pricing pages before you trust the absolute numbers. Override per-model or set
+- **Prices** (`prices.json`, ~2000 models) are sourced from LiteLLM's community-maintained
+  price table. Refresh them any time with `agentbreaker update-prices` (bundled table is the
+  offline fallback). Still spot-check the models you care about. Override per-model or set
   `unknown_model="default_rate"` to meter unknown models at a conservative rate instead of
   failing.
 

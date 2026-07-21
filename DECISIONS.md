@@ -131,6 +131,18 @@ Per spec §9.1: record decisions made where the spec was ambiguous or silent.
 - **Cloud is not deployed** — `cloud/` ships the migration, edge function, and Next.js app
   plus a runbook; provisioning a Supabase project and Vercel deploy are user-run.
 
+## Live model prices (Phase I)
+
+- **Prices are pulled from LiteLLM's `model_prices_and_context_window.json`** — a
+  comprehensive, community-maintained table (~2000 chat models) — via `agentbreaker
+  update-prices` (`pricing_update.py` + `cli.py`, a new `[project.scripts]` entry). Their
+  per-token costs are scaled to our per-million-token schema; bare model names get their
+  `litellm_provider` prefix, already-prefixed keys are kept. The bundled `prices.json` is now
+  the refreshed comprehensive table (replaces the hand-curated ~21). Offline still works —
+  the file is the fallback, no network at runtime.
+- **`openai/gpt-4o` stays 2.50/10.00** in LiteLLM, so the existing tests are unaffected. The
+  never-$0 policy is unchanged: a model absent from the table still fails or hits `default_rate`.
+
 ## Live control (dashboard pause/kill)
 
 - **A `ControlPoller` daemon thread** (`control.py`) polls a control endpoint (best-effort,

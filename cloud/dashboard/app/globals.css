@@ -10,6 +10,13 @@ body {
   @apply bg-bg text-fg antialiased;
 }
 
+/* Keyboard-only focus ring (mouse clicks use :focus, not :focus-visible). */
+@layer base {
+  :focus-visible {
+    @apply outline-none ring-2 ring-ink/35 ring-offset-1 ring-offset-bg;
+  }
+}
+
 @layer components {
   .card {
     @apply rounded-xl border border-border bg-card shadow-soft;

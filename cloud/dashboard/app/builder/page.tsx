@@ -334,7 +334,7 @@ function GuardConfig({
 }) {
   const num = (v: string) => (v === "" ? undefined : Number(v));
   const inp =
-    "mt-1 w-full rounded border border-border bg-surface px-2 py-1 text-sm outline-none focus:border-primary";
+    "mt-1 w-full rounded border border-border bg-surface px-2 py-1 text-sm outline-none focus:border-ink";
   return (
     <div className="card space-y-2 p-4">
       <div className="text-sm font-semibold">Guard config</div>
@@ -413,7 +413,7 @@ function EdgeInspector({
       <label className="block">
         <span className="text-xs text-muted">condition (router branch label)</span>
         <input
-          className="mt-1 w-full rounded border border-border bg-surface px-2 py-1 text-sm outline-none focus:border-primary"
+          className="mt-1 w-full rounded border border-border bg-surface px-2 py-1 text-sm outline-none focus:border-ink"
           value={label}
           onChange={(e) => onChange(e.target.value)}
         />

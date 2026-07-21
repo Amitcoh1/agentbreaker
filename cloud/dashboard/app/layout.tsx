@@ -1,12 +1,12 @@
 import "./globals.css";
 import "@xyflow/react/dist/style.css";
 import type { ReactNode } from "react";
-import { Fira_Code, Fira_Sans } from "next/font/google";
+import { Fira_Code, Inter } from "next/font/google";
 import Sidebar from "@/components/Sidebar";
 
-const sans = Fira_Sans({
+const sans = Inter({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-sans",
 });
 const mono = Fira_Code({
@@ -16,8 +16,16 @@ const mono = Fira_Code({
 });
 
 export const metadata = {
-  title: "AgentBreaker · FinOps",
-  description: "Cost control and receipts for AI agent workflows.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://agentbreaker-cyan.vercel.app"),
+  title: "Breakerbox — the circuit breaker for AI agents",
+  description:
+    "Draw an agent workflow, get readable guarded Python. A hard dollar budget on the workflow itself — your agents can't outspend you. No server execution, no stored keys.",
+  icons: { icon: "/favicon.svg" },
+  openGraph: {
+    title: "Breakerbox",
+    description: "The circuit breaker for AI agents — your agents can't outspend you.",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

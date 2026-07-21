@@ -97,7 +97,7 @@ export default function RunControls({ run, events }: { run: Run; events: RunEven
           <div className="mb-3 text-sm font-semibold">Export</div>
           <button
             onClick={download}
-            className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm transition-colors hover:bg-white/5"
+            className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm transition-colors hover:bg-ink/5"
           >
             <Download className="h-4 w-4" /> Download JSON
           </button>

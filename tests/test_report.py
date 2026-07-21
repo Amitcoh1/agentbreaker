@@ -84,7 +84,7 @@ def test_render_html_leads_with_the_real_number():
 
 def test_render_terminal_leads_with_stopped_at():
     txt = render_terminal(summarize(_killed_events()))
-    assert "AgentBreaker receipt" in txt
+    assert "breakerbox receipt" in txt
     assert "killed" in txt
     assert "stopped at" in txt
     assert "naive linear extrapolation" in txt

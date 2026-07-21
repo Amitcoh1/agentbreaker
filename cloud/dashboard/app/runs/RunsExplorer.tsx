@@ -63,7 +63,7 @@ export default function RunsExplorer({ initial }: { initial: Run[] }) {
               key={f}
               onClick={() => setStatus(f)}
               className={`chip capitalize ${
-                status === f ? "bg-primary/20 text-primary" : "bg-white/5 text-muted hover:text-fg"
+                status === f ? "bg-primary/20 text-primary" : "bg-ink/5 text-muted hover:text-fg"
               }`}
             >
               {f}

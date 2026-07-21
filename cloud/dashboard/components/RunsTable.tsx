@@ -11,7 +11,7 @@ const badge: Record<string, string> = {
 
 export function StatusBadge({ status, reason }: { status: string; reason?: string | null }) {
   return (
-    <span className={`chip ${badge[status] ?? "bg-white/10 text-muted"}`}>
+    <span className={`chip ${badge[status] ?? "bg-ink/10 text-muted"}`}>
       {status === "running" && (
         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
       )}
@@ -46,7 +46,7 @@ export function RunsTable({ runs }: { runs: Run[] }) {
           {runs.map((r) => (
             <tr
               key={r.run_id}
-              className="border-b border-border/60 last:border-0 hover:bg-white/[0.03]"
+              className="border-b border-border/60 last:border-0 hover:bg-ink/[0.03]"
             >
               <td className="px-4 py-3">
                 <Link href={`/runs/${r.run_id}`} className="num text-primary hover:underline">

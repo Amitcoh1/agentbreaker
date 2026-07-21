@@ -36,11 +36,11 @@ const initial = specToFlow(EXAMPLE_SPEC);
 
 const btn = (on: boolean) =>
   `inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium ${
-    on ? "bg-primary/20 text-primary hover:bg-primary/30" : "cursor-not-allowed bg-white/5 text-muted"
+    on ? "bg-brass text-paper hover:bg-brassdark" : "cursor-not-allowed bg-ink/5 text-muted"
   }`;
 const ghost = (on: boolean) =>
   `inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-sm ${
-    on ? "hover:bg-white/5" : "cursor-not-allowed text-muted"
+    on ? "hover:bg-ink/5" : "cursor-not-allowed text-muted"
   }`;
 
 export default function BuilderPage() {
@@ -72,7 +72,7 @@ export default function BuilderPage() {
 
   const onConnect = useCallback(
     (c: Connection) =>
-      setEdges((eds) => addEdge({ ...c, animated: true, style: { stroke: "#3B82F6" } }, eds)),
+      setEdges((eds) => addEdge({ ...c, animated: true, style: { stroke: "#1f2328" } }, eds)),
     [setEdges],
   );
 
@@ -225,7 +225,7 @@ export default function BuilderPage() {
             <button
               key={t}
               onClick={() => addNode(t)}
-              className="flex w-full items-center gap-2 rounded border border-border px-2 py-1.5 text-sm capitalize hover:bg-white/5"
+              className="flex w-full items-center gap-2 rounded border border-border px-2 py-1.5 text-sm capitalize hover:bg-ink/5"
             >
               <Plus className="h-3.5 w-3.5" /> {t}
             </button>
@@ -258,9 +258,9 @@ export default function BuilderPage() {
               fitView
               proOptions={{ hideAttribution: true }}
             >
-              <Background color="#232A36" gap={20} />
+              <Background color="#e6e3da" gap={20} />
               <Controls showInteractive={false} />
-              <MiniMap pannable className="!bg-surface" nodeColor={() => "#3B82F6"} />
+              <MiniMap pannable className="!bg-surface" nodeColor={() => "#1f2328"} />
             </ReactFlow>
           </NodeIssues.Provider>
         </div>
@@ -430,11 +430,11 @@ function CodeModal({ code, onClose }: { code: string; onClose: () => void }) {
           <div className="flex gap-2">
             <button
               onClick={() => navigator.clipboard.writeText(code)}
-              className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 text-sm hover:bg-white/5"
+              className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 text-sm hover:bg-ink/5"
             >
               <Copy className="h-4 w-4" /> Copy
             </button>
-            <button onClick={onClose} className="rounded border border-border p-1 hover:bg-white/5">
+            <button onClick={onClose} className="rounded border border-border p-1 hover:bg-ink/5">
               <X className="h-4 w-4" />
             </button>
           </div>

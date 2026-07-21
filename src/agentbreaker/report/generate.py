@@ -132,7 +132,7 @@ def render_html(summary: dict) -> str:
 def render_terminal(summary: dict) -> str:
     r = summary
     rule = "─" * 56
-    head = f" AgentBreaker receipt · {r['status']}"
+    head = f" breakerbox receipt · {r['status']}"
     if r["trip_reason"]:
         head += f" ({r['trip_reason']})"
     lines = [

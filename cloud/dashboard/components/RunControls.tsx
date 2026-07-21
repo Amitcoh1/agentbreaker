@@ -47,16 +47,26 @@ export default function RunControls({ run, events }: { run: Run; events: RunEven
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <div className="card p-4">
-        <div className="mb-3 text-sm font-semibold">Live control</div>
+        <div className="mb-2 text-sm font-semibold">Live control</div>
+        <p className="mb-3 text-xs leading-relaxed text-muted">
+          <strong className="font-medium text-fg">Pause</strong> checkpoints the run so you can
+          resume it later with more budget; <strong className="font-medium text-fg">Kill</strong>{" "}
+          stops it and finalizes the receipt. Either way the command is applied at the next hop
+          boundary — never mid-call — so no request is interrupted.
+        </p>
         {!controlUrl && (
-          <p className="mb-3 text-xs text-accent">
-            NEXT_PUBLIC_CONTROL_URL is not set — commands are disabled.
+          <p className="mb-3 text-xs text-brass">
+            Control endpoint not configured (NEXT_PUBLIC_CONTROL_URL) — commands are disabled.
           </p>
         )}
-        {!active && (
+        {controlUrl && !active && (
           <p className="mb-3 text-xs text-muted">
-            This run is {run.status ?? "not active"}; control applies to running agents.
+            This run is {run.status ?? "finished"} — control only applies while a run is still
+            running.
           </p>
+        )}
+        {controlUrl && active && !key && (
+          <p className="mb-3 text-xs text-muted">Enter your control key below to enable commands.</p>
         )}
         <div className="flex gap-2">
           <button

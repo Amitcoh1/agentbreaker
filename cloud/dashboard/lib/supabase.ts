@@ -29,6 +29,7 @@ export type Run = {
 
 export type RunEvent = {
   seq: number;
+  ts: string | null;
   type: string;
   node: string | null;
   parent: string | null;

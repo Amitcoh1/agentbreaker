@@ -55,6 +55,39 @@ export function flowToSpec(fnodes: FlowNode[], fedges: Edge[], config: GraphSpec
   };
 }
 
+// Per-node issues for on-canvas hints (validate() returns global messages; this is per node).
+export function nodeIssues(spec: GraphSpec): Record<string, string> {
+  const nodes = spec.nodes ?? [];
+  const edges = spec.edges ?? [];
+  const issues: Record<string, string> = {};
+  const start = nodes.find((n) => n.type === "start")?.id;
+  const adj: Record<string, string[]> = {};
+  for (const e of edges) (adj[e.source] ??= []).push(e.target);
+  const seen = new Set<string>();
+  if (start) {
+    const st = [start];
+    while (st.length) {
+      const u = st.pop() as string;
+      if (seen.has(u)) continue;
+      seen.add(u);
+      st.push(...(adj[u] ?? []));
+    }
+  }
+  for (const n of nodes) {
+    if (n.type === "model" && !n.model) issues[n.id] = "needs a model";
+    else if (n.type === "tool" && !n.name) issues[n.id] = "needs a name";
+    else if (n.type === "router") {
+      const outs = edges.filter((e) => e.source === n.id);
+      if (outs.length < 2) issues[n.id] = "needs ≥2 branches";
+      else if (outs.some((e) => !e.condition)) issues[n.id] = "a branch has no condition";
+    }
+    if (!issues[n.id] && start && n.id !== start && !seen.has(n.id)) {
+      issues[n.id] = "unreachable from start";
+    }
+  }
+  return issues;
+}
+
 let counter = 0;
 export function newNode(type: SpecNode["type"], existing: Set<string>): SpecNode {
   let id: string = type;

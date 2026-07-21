@@ -75,3 +75,19 @@ Per spec §9.1: record decisions made where the spec was ambiguous or silent.
   is the cross-check, and the streaming fallback when usage is absent).
 - **tiktoken `o200k_base` approximates non-OpenAI tokenizers** — good enough for estimates;
   reconcile corrects to real usage anyway.
+
+## Phase 3
+
+- **Receipt is built only from the JSONL event stream** (spec 9.4). To carry
+  budget/max_hops into the report without a second data source, a `start` event is emitted
+  at run begin holding the run config — so the "single source" rule stays true.
+- **Projection = mean cost/hop × max_hops**, clamped to ≥ spent, labelled as a conservative
+  lower bound on a true runaway. Deliberately not a scary fabricated number — an inflated
+  "projected $40" would get called out on HN; the honest floor still makes the point.
+- **Status inferred from events:** a `pause` event → paused; a `trip` with no pause →
+  killed; a `finish` with no trip → completed.
+- **HTML is one self-contained file** — inline CSS + a single inline SVG sparkline, no JS,
+  no external assets — so it renders offline and screenshots cleanly into Slack (F4).
+- **Terminal summary prints on every finalize** (F4 lists it as an output). A library
+  printing to stdout is mildly intrusive but it's the product's headline moment; the HTML
+  path is also returned on `GuardedApp.last_report_path` and the trip exceptions.

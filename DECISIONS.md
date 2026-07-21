@@ -158,3 +158,22 @@ Per spec §9.1: record decisions made where the spec was ambiguous or silent.
   command from the dashboard requires a separate `CONTROL_KEY`, so a public/unlisted run URL
   can't be used to kill someone's agent.
 - **Poller stops on finalize** and after capturing one command (no busy-loop).
+
+## Repositioning — Phase A (credibility fixes)
+
+The project is repositioning as the codegen-only, no-server-execution, no-stored-keys visual
+builder. Before that launch, three soft spots in the core were fixed:
+
+- **`degrade` removed from the public API.** `on_trip` is now `"pause" | "kill"` only. A
+  documented option that silently did something else ("falls back to pause") is a credibility
+  leak; it's gone from the signature, validation, docstrings, README, and tests. (Earlier Phase-2
+  notes about degrade are historical.)
+- **Honest headline + honest projection.** The receipt now leads with the indisputable number —
+  **"stopped at $Y · budget $Z"** — and demotes the projection to labelled fine print. The
+  projection formula changed to a **naive linear extrapolation: last cost-bearing hop × remaining
+  hops** (clamped ≥ spent; completed → spent), and the label states its bias: it **underestimates**
+  growing-context loops (per-hop cost rises), so we err toward underselling the number.
+- **Overshoot badge.** A `_Call` now records whether `max_tokens` was declared; on reconcile, if
+  `actual > estimate and not declared_max`, the event carries `detail.overshoot` and the receipt
+  shows **"cap enforced one hop late — no max_tokens declared."** This makes the one case where the
+  guard can exceed budget (a single call with unbounded output) explicit rather than surprising.

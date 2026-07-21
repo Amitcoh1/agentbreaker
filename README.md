@@ -20,7 +20,7 @@ app = guard(
     max_hops=50,               # total model/tool steps across all branches
     ttl_seconds=600,           # wall-clock limit
     velocity_usd_per_min=2.0,  # trip if the burn rate spikes
-    on_trip="pause",           # "pause" | "degrade" | "kill"
+    on_trip="pause",           # "pause" | "kill"
 )
 
 result = app.invoke(inputs)    # same call you already make
@@ -49,8 +49,8 @@ before it runs. Every run also writes a self-contained `report.html`:
 ```
 ────────────────────────────────────────────────────────
  AgentBreaker receipt · killed (budget)
- hops 13   spent $0.8157   budget $0.9000
- projected uncapped $6.27  →  stopped at $0.8157
+ stopped at $0.8157   budget $0.9000   hops 13
+ projected (naive linear extrapolation, likely an underestimate): $3.13
 ────────────────────────────────────────────────────────
 ```
 
@@ -68,12 +68,13 @@ before it runs. Every run also writes a self-contained `report.html`:
     `app.resume(checkpoint_id, extra_budget_usd=...)` continues from where it stopped.
   - `kill` — stops, finalizes the receipt, raises `BudgetKilled` listing which
     **side-effecting** tools already fired (so you can compensate).
-  - `degrade` — *(currently falls back to a graceful pause; see Limitations.)*
 - **Self-metering.** Counts input tokens locally (tiktoken) and meters streamed output
   chunks, then reconciles against the provider's reported usage and flags discrepancies —
-  never trusts a single `usage` field, never meters an unknown model as `$0`.
+  never trusts a single `usage` field, never meters an unknown model as `$0`. If a call ran
+  without `max_tokens` and the cap landed one hop late, the receipt flags that hop explicitly.
 - **The receipt.** Terminal summary + single-file `report.html` (inline CSS/SVG, no JS, no
-  external assets) + JSON. Headline: **projected uncapped $X → stopped at $Y.**
+  external assets) + JSON. Leads with the indisputable number — **stopped at $Y, budget $Z** —
+  with the projection as clearly-labelled fine print.
 
 ## How it composes with your gateway
 
@@ -103,12 +104,10 @@ Python 3.11+. Core deps: `langgraph`, `langchain-core`, `tiktoken`, `jinja2`.
 
 - **`on_trip="pause"` needs a checkpointer.** Compile your graph with one
   (`.compile(checkpointer=MemorySaver())`); `guard()` raises if it's missing.
-- **`degrade` currently falls back to a graceful pause.** Transparent model-swap isn't
-  reachable from a callback when `guard()` only holds the *compiled* app — the node already
-  owns its model. A real swap needs an opt-in model wrapper at graph-build time (planned).
 - **The overshoot rule:** the guard never interrupts a call mid-flight. If your model has
   **no** `max_tokens`, the reserve estimate can under-count and the cap is enforced one hop
-  late (overshoot bounded by a single call). Set `max_tokens` and it stops strictly under.
+  late (overshoot bounded by a single call) — the receipt flags that hop. Set `max_tokens`
+  and it stops strictly under budget.
 - **Prices** (`prices.json`, ~2000 models) are sourced from LiteLLM's community-maintained
   price table. Refresh them any time with `agentbreaker update-prices` (bundled table is the
   offline fallback). Still spot-check the models you care about. Override per-model or set

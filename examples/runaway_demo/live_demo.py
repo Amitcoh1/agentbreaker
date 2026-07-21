@@ -56,7 +56,7 @@ def build(loops: int):
     model = SlowModel()
 
     def call(state):
-        model.invoke([HumanMessage(content="continue the task")])
+        model.invoke([HumanMessage(content="continue the task")], max_tokens=model.max_tokens)
         return {"hop": state["hop"] + 1}
 
     graph = StateGraph(S)

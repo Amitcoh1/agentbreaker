@@ -19,6 +19,10 @@ def main(argv: list[str] | None = None) -> int:
     val = sub.add_parser("validate", help="validate a graph spec (JSON)")
     val.add_argument("spec", help="path to a graph spec.json")
 
+    bld = sub.add_parser("build", help="generate guarded LangGraph Python from a spec")
+    bld.add_argument("spec", help="path to a graph spec.json")
+    bld.add_argument("-o", "--output", default=None, help="write .py here (default: stdout)")
+
     args = parser.parse_args(argv)
     if args.command == "update-prices":
         return pricing_update.run(source=args.source, output=args.output, dry_run=args.dry_run)
@@ -34,6 +38,24 @@ def main(argv: list[str] | None = None) -> int:
             print("NOTE: ", n)
         print("OK" if result.ok else f"INVALID — {len(result.errors)} error(s)")
         return 0 if result.ok else 1
+    if args.command == "build":
+        from agentbreaker import codegen, graphspec
+
+        spec = graphspec.load_spec(args.spec)
+        result = graphspec.validate(spec)
+        if not result.ok:
+            for e in result.errors:
+                print("ERROR:", e)
+            return 1
+        code = codegen.generate(spec)
+        if args.output:
+            from pathlib import Path
+
+            Path(args.output).write_text(code)
+            print(f"wrote {args.output}")
+        else:
+            print(code, end="")
+        return 0
     parser.error(f"unknown command {args.command!r}")
     return 2
 

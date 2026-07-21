@@ -54,6 +54,14 @@ def example_spec() -> dict:
     return json.loads(files("agentbreaker").joinpath("graph.example.json").read_text())
 
 
+def to_json(spec: dict) -> str:
+    return json.dumps(spec, indent=2)
+
+
+def from_json(text: str) -> dict:
+    return json.loads(text)
+
+
 def _num(v) -> bool:
     return isinstance(v, (int, float)) and not isinstance(v, bool)
 

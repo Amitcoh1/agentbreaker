@@ -16,6 +16,7 @@ import { Copy, Download, FileUp, LayoutGrid, Plus, Save, X } from "lucide-react"
 import BudgetTree from "./BudgetTree";
 import BuilderNode from "./BuilderNode";
 import Inspector from "./Inspector";
+import TemplatesMenu from "./TemplatesMenu";
 import { NodeIssues } from "./context";
 import {
   EXAMPLE_SPEC,
@@ -28,7 +29,6 @@ import {
 } from "@/lib/graphspec";
 import { type FlowNode, flowToSpec, newNode, nodeIssues, specToFlow } from "@/lib/graphflow";
 import { MODEL_NAMES } from "@/lib/pricing";
-import { TEMPLATES } from "@/lib/templates";
 
 const nodeTypes = { ab: BuilderNode };
 const STORAGE = "ab_builder_spec";
@@ -192,23 +192,12 @@ export default function BuilderPage() {
         <button onClick={() => load(spec)} className={ghost(true)} title="Re-layout from the graph">
           <LayoutGrid className="h-4 w-4" /> Auto-layout
         </button>
-        <select
-          className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm outline-none focus:border-primary"
-          value=""
-          onChange={(e) => {
-            const t = TEMPLATES.find((x) => x.name === e.target.value);
-            if (t) load(t.spec);
-            e.currentTarget.value = "";
-          }}
+        <TemplatesMenu current={spec} onLoad={load} />
+        <button
+          onClick={() => localStorage.setItem(STORAGE, toJson(spec))}
+          className={ghost(true)}
+          title="Save this canvas to the browser (restored next visit)"
         >
-          <option value="">Templates…</option>
-          {TEMPLATES.map((t) => (
-            <option key={t.name} value={t.name}>
-              {t.name}
-            </option>
-          ))}
-        </select>
-        <button onClick={() => localStorage.setItem(STORAGE, toJson(spec))} className={ghost(true)}>
           <Save className="h-4 w-4" /> Save
         </button>
         {!canExport && (

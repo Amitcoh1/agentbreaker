@@ -1,44 +1,35 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
-type Tone = "blue" | "amber" | "green" | "red";
-
-const iconTone: Record<Tone, string> = {
-  blue: "bg-primary/15 text-primary",
-  amber: "bg-accent/15 text-accent",
-  green: "bg-good/15 text-good",
-  red: "bg-bad/15 text-bad",
-};
-const subTone: Record<Tone, string> = {
-  blue: "text-primary",
-  amber: "text-accent",
-  green: "text-good",
-  red: "text-bad",
-};
-
+// Neutral by default; `brass` is earned — use it only when the number itself is a trip
+// signal (e.g. active/killed runs worth attention), per the brand's one rule.
 export function StatCard({
   label,
   value,
   sub,
   icon: Icon,
-  tone = "blue",
+  brass = false,
 }: {
   label: string;
   value: string;
   sub?: string;
   icon: LucideIcon;
-  tone?: Tone;
+  brass?: boolean;
 }) {
   return (
-    <div className="card p-4 transition-shadow hover:shadow-glow">
+    <div className="card p-4">
       <div className="flex items-start justify-between">
         <span className="text-xs font-medium text-muted">{label}</span>
-        <span className={`grid h-8 w-8 place-items-center rounded-lg ${iconTone[tone]}`}>
+        <span
+          className={`grid h-8 w-8 place-items-center rounded-lg ${
+            brass ? "bg-brass/15 text-brass" : "bg-ink/[0.06] text-ink"
+          }`}
+        >
           <Icon className="h-4 w-4" />
         </span>
       </div>
       <div className="num mt-3 text-2xl font-semibold tracking-tight">{value}</div>
-      {sub && <div className={`mt-1 text-xs ${subTone[tone]}`}>{sub}</div>}
+      {sub && <div className={`mt-1 text-xs ${brass ? "text-brass" : "text-muted"}`}>{sub}</div>}
     </div>
   );
 }

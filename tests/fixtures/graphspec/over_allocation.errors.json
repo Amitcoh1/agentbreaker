@@ -1,0 +1,3 @@
+[
+  "Budget over-allocated: node sub-budgets total $5.50 but config.budget_usd is only $5.00. Lower a node's sub_budget_usd or raise the workflow budget."
+]

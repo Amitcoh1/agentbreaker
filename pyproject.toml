@@ -38,6 +38,8 @@ packages = ["src/agentbreaker"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+# Golden codegen fixtures are generated artifacts, not source — don't lint them.
+extend-exclude = ["tests/fixtures"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

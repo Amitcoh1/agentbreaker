@@ -1,0 +1,15 @@
+{
+  "version": "1",
+  "config": {"budget_usd": 5.0, "on_trip": "kill"},
+  "nodes": [
+    {"id": "start", "type": "start"},
+    {"id": "planner", "type": "model", "model": "openai/gpt-4o", "max_tokens": 1024, "sub_budget_usd": 4.0},
+    {"id": "writer", "type": "model", "model": "openai/gpt-4o", "max_tokens": 1024, "sub_budget_usd": 1.5},
+    {"id": "end", "type": "end"}
+  ],
+  "edges": [
+    {"source": "start", "target": "planner"},
+    {"source": "planner", "target": "writer"},
+    {"source": "writer", "target": "end"}
+  ]
+}

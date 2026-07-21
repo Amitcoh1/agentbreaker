@@ -23,6 +23,7 @@ class TripReason(StrEnum):
     HOPS = "hops"
     TTL = "ttl"
     VELOCITY = "velocity"
+    REMOTE = "remote"  # pause/kill issued from the cloud dashboard
 
 
 class Tripwire:

@@ -1,6 +1,6 @@
 # Roadmap
 
-AgentBreaker has one job: make agent workflows safe to run — a hard dollar budget on the
+Breakerbox has one job: make agent workflows safe to run — a hard dollar budget on the
 workflow itself, a stop that never corrupts state, and code you own. This roadmap says where
 that's going. It's a statement of direction, not a delivery contract: order and timing will
 shift based on what users actually need. Issues and milestones on this repo are the source of
@@ -31,8 +31,8 @@ The core library is MIT-licensed and stays that way. Forever.
       first, not last.
 - [ ] **OpenTelemetry GenAI export** — per-hop spans in standard semantic conventions, so
       receipts land in the observability stack you already run (Datadog, Grafana, Langfuse, …).
-- [ ] **Gateway composability** — documented, tested setups running AgentBreaker behind
-      LiteLLM / Portkey / others: your gateway caps the org, AgentBreaker governs the
+- [ ] **Gateway composability** — documented, tested setups running Breakerbox behind
+      LiteLLM / Portkey / others: your gateway caps the org, Breakerbox governs the
       workflow. Complements, not competitors.
 - [ ] **Policy templates** — `agentbreaker init --template research-agent`: prewired budgets,
       velocity limits, and side-effect tags for common agent patterns.

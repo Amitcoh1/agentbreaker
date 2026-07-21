@@ -1,4 +1,4 @@
-"""AgentBreaker: circuit breaker + hierarchical cost budgeting for agent workflows."""
+"""Breakerbox: circuit breaker + hierarchical cost budgeting for agent workflows."""
 
 from agentbreaker.guard import (
     BudgetKilled,

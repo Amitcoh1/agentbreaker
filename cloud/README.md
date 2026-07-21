@@ -1,4 +1,4 @@
-# AgentBreaker cloud (optional)
+# Breakerbox cloud (optional)
 
 A FinOps-style dashboard for run receipts: an overview (spend/savings KPIs + charts), a
 searchable run list, and a per-run detail with a **live** timeline, a **workflow DAG**, raw

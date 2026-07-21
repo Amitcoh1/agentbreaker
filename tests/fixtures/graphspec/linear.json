@@ -1,0 +1,23 @@
+{
+  "version": "1",
+  "config": {
+    "budget_usd": 5.0,
+    "max_hops": 50,
+    "ttl_seconds": 600,
+    "velocity_usd_per_min": 2.0,
+    "on_trip": "pause"
+  },
+  "nodes": [
+    {"id": "start", "type": "start"},
+    {"id": "planner", "type": "model", "model": "openai/gpt-4o", "max_tokens": 1024, "sub_budget_usd": 2.0},
+    {"id": "search", "type": "tool", "name": "web_search", "side_effecting": false},
+    {"id": "writer", "type": "model", "model": "anthropic/claude-sonnet-4-6", "max_tokens": 2048, "sub_budget_usd": 1.5},
+    {"id": "end", "type": "end"}
+  ],
+  "edges": [
+    {"source": "start", "target": "planner"},
+    {"source": "planner", "target": "search"},
+    {"source": "search", "target": "writer"},
+    {"source": "writer", "target": "end"}
+  ]
+}

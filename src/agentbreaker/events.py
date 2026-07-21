@@ -7,6 +7,7 @@ fact the receipt needs must be emitted here.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -31,12 +32,15 @@ class RunEvent:
 
 
 class EventLog:
-    def __init__(self, run_id: str, path: str | Path) -> None:
+    def __init__(
+        self, run_id: str, path: str | Path, sink: Callable[[dict], None] | None = None
+    ) -> None:
         self.run_id = run_id
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._seq = 0
         self.events: list[RunEvent] = []
+        self._sink = sink  # optional cloud forwarder (best-effort)
 
     def emit(self, type: str, **fields) -> RunEvent:
         ev = RunEvent(
@@ -48,6 +52,9 @@ class EventLog:
         )
         self._seq += 1
         self.events.append(ev)
+        row = asdict(ev)
         with self.path.open("a") as f:
-            f.write(json.dumps(asdict(ev)) + "\n")
+            f.write(json.dumps(row) + "\n")
+        if self._sink is not None:
+            self._sink(row)
         return ev

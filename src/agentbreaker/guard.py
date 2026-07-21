@@ -20,6 +20,7 @@ Trip actions:
 
 from __future__ import annotations
 
+import os
 import uuid
 import warnings
 from collections.abc import Callable
@@ -40,6 +41,7 @@ from agentbreaker.meter import (
 )
 from agentbreaker.pricing import PriceTable
 from agentbreaker.report.generate import render_terminal, write_report
+from agentbreaker.sink import HttpEventSink
 from agentbreaker.tripwire import TripReason, Tripwire
 
 _ROOT = "root"
@@ -105,6 +107,7 @@ class _Run:
     thread_id: str | None = None
     config: dict | None = None
     report_path: Path | None = None
+    sink: HttpEventSink | None = None
     calls: dict[str, _Call] = field(default_factory=dict)
     side_effect_fired: list[str] = field(default_factory=list)
 
@@ -295,6 +298,7 @@ class GuardedApp:
         topup_policy,
         unknown_model: Literal["fail", "default_rate"],
         report_dir: str | Path,
+        report_to: str | None,
     ) -> None:
         if on_trip not in ("pause", "degrade", "kill"):
             raise ValueError(f"on_trip must be pause|degrade|kill, got {on_trip!r}")
@@ -326,6 +330,7 @@ class GuardedApp:
         self.topup_policy = topup_policy
         self.prices = PriceTable.load(unknown_model=unknown_model)
         self.report_dir = Path(report_dir)
+        self.report_to = report_to
         self._runs: dict[str, _Run] = {}
         self._resumable: dict[str, _Run] = {}
         self.last_report_path: Path | None = None
@@ -374,6 +379,8 @@ class GuardedApp:
         html_path, summary = write_report(run.run_id, run.eventlog.path, self.report_dir)
         run.report_path = html_path
         self.last_report_path = html_path
+        if run.sink is not None:
+            run.sink.finish(summary)
         print(render_terminal(summary))
         return html_path
 
@@ -401,7 +408,16 @@ class GuardedApp:
         tripwire = Tripwire(
             self.budget_micro, self.max_hops, self.ttl_seconds, self.velocity_micro_per_min
         )
-        eventlog = EventLog(run_id, self.report_dir / f"{run_id}.jsonl")
+        sink = None
+        if self.report_to:
+            sink = HttpEventSink(
+                self.report_to, key=os.getenv("AGENTBREAKER_INGEST_KEY"), run_id=run_id
+            )
+        eventlog = EventLog(
+            run_id,
+            self.report_dir / f"{run_id}.jsonl",
+            sink=sink.emit if sink else None,
+        )
         eventlog.emit(
             "start",
             detail={
@@ -413,7 +429,7 @@ class GuardedApp:
                 "sub_budgets": {k: _to_micro(v) for k, v in self.sub_budgets.items()},
             },
         )
-        run = _Run(run_id, ledger, tripwire, eventlog)
+        run = _Run(run_id, ledger, tripwire, eventlog, sink=sink)
         run.handler = _BudgetHandler(self, run)
         return run
 
@@ -461,8 +477,9 @@ def guard(
     topup_policy: Literal["deny", "auto"] | Callable = "deny",
     unknown_model: Literal["fail", "default_rate"] = "fail",
     report_dir: str | Path = "./agentbreaker_reports",
+    report_to: str | None = None,
 ) -> GuardedApp:
     return GuardedApp(
         app, budget_usd, max_hops, ttl_seconds, velocity_usd_per_min, on_trip,
-        degrade_model, sub_budgets, topup_policy, unknown_model, report_dir,
+        degrade_model, sub_budgets, topup_policy, unknown_model, report_dir, report_to,
     )

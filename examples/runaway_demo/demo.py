@@ -53,7 +53,8 @@ def build_runaway():
     model = RunawayModel()
 
     def agent(state: State):
-        response = model.invoke(state["messages"])
+        # declare max_tokens so the reserve is a true upper bound (no late-cap overshoot)
+        response = model.invoke(state["messages"], max_tokens=MAX_OUTPUT_TOKENS)
         # a broken retry loop that never drops context -> it accumulates forever
         grown = [*state["messages"], response, HumanMessage(content="that failed, try again")]
         return {"messages": grown, "hop": state["hop"] + 1}

@@ -33,9 +33,9 @@ def test_summarize_killed_run():
     assert s["max_hops"] == 50
     assert s["spent_usd"] == 0.00075
     assert s["side_effects_fired"] == ["send_email"]
-    # projection: mean cost/hop (one cost-hop @ 750) × 50 = 37500 microUSD
-    assert s["projected_uncapped_usd"] == 0.0375
-    assert s["saved_usd"] == 0.0375 - 0.00075
+    # projection = last cost-hop (750) × remaining hops (50 - 2) = 36000, + spent 750 = 36750
+    assert s["projected_uncapped_usd"] == 0.03675
+    assert s["saved_usd"] == 0.036
 
 
 def test_completed_run_projection_equals_spent():
@@ -53,24 +53,47 @@ def test_completed_run_projection_equals_spent():
     assert s["saved_usd"] == 0.0
 
 
-def test_render_html_is_self_contained():
+def _overshoot_events():
+    return [
+        {"run_id": "o", "seq": 0, "ts": "t", "type": "start",
+         "detail": {"budget_micro": 5_000_000, "max_hops": 50}},
+        {"run_id": "o", "seq": 1, "ts": "t", "type": "reconcile", "node": "a",
+         "model": "openai/gpt-4o", "tokens_in": 100, "tokens_out": 5000,
+         "estimate_microusd": 10240, "actual_microusd": 51000, "cumulative_microusd": 51000,
+         "detail": {"overshoot": {"estimate_microusd": 10240, "actual_microusd": 51000}}},
+        {"run_id": "o", "seq": 2, "ts": "t", "type": "finish", "cumulative_microusd": 51000},
+    ]
+
+
+def test_overshoot_is_flagged():
+    s = summarize(_overshoot_events())
+    assert s["has_overshoot"] is True
+    assert s["overshoot_hops"] == 1
+    assert "cap enforced one hop late" in render_terminal(s)
+    assert "no max_tokens declared" in render_html(s)
+
+
+def test_render_html_leads_with_the_real_number():
     html = render_html(summarize(_killed_events()))
     assert "<html" in html and "</html>" in html
     assert "http://" not in html and "https://" not in html  # no external assets
     assert "send_email" in html
-    assert "0.0375" in html  # projected headline
+    assert "stopped at" in html  # the indisputable number is the hero
+    assert "naive linear extrapolation" in html  # projection is labelled fine print
 
 
-def test_render_terminal():
+def test_render_terminal_leads_with_stopped_at():
     txt = render_terminal(summarize(_killed_events()))
     assert "AgentBreaker receipt" in txt
-    assert "killed" in txt and "hops" in txt
-    assert "$0.0375" in txt
+    assert "killed" in txt
+    assert "stopped at" in txt
+    assert "naive linear extrapolation" in txt
 
 
 def test_write_report_produces_html_and_json(tmp_path):
-    events_path = tmp_path / "r1.jsonl"
     import json
+
+    events_path = tmp_path / "r1.jsonl"
     events_path.write_text("\n".join(json.dumps(e) for e in _killed_events()))
     html_path, summary = write_report("r1", events_path, tmp_path)
     assert html_path.exists() and html_path.suffix == ".html"

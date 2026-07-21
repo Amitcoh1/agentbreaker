@@ -50,13 +50,15 @@ def summarize(events: list[dict]) -> dict:
                 "cumulative_micro": e.get("cumulative_microusd") or 0,
                 "side_effecting": False,
                 "discrepancy": (e.get("detail") or {}).get("discrepancy"),
+                "overshoot": (e.get("detail") or {}).get("overshoot"),
             })
         elif e["type"] == "tool_call":
             timeline.append({
                 "kind": "tool", "node": e.get("node"), "model": None,
                 "tokens_in": 0, "tokens_out": 0, "actual_micro": 0,
                 "cumulative_micro": e.get("cumulative_microusd") or 0,
-                "side_effecting": e.get("side_effecting", False), "discrepancy": None,
+                "side_effecting": e.get("side_effecting", False),
+                "discrepancy": None, "overshoot": None,
             })
 
     # Status = the LAST terminal event by seq — so a run that paused then resumed to a
@@ -72,11 +74,15 @@ def summarize(events: list[dict]) -> dict:
         trip_reason = (trip.get("detail") or {}).get("reason")
 
     spent_micro = timeline[-1]["cumulative_micro"] if timeline else 0
-    cost_hops = sum(1 for t in timeline if t["actual_micro"] > 0)
-    if status == "completed" or cost_hops == 0 or not max_hops:
+    # Projection = naive linear extrapolation: last cost-bearing hop × remaining hops. In a
+    # growing-context loop per-hop cost rises, so this UNDERESTIMATES — we err toward underselling.
+    cost_micros = [t["actual_micro"] for t in timeline if t["actual_micro"] > 0]
+    hops_done = len(timeline)
+    if status == "completed" or not cost_micros or not max_hops:
         projected_micro = spent_micro
     else:
-        projected_micro = max(round(spent_micro / cost_hops * max_hops), spent_micro)
+        remaining = max(max_hops - hops_done, 0)
+        projected_micro = max(spent_micro + cost_micros[-1] * remaining, spent_micro)
 
     max_actual = max((t["actual_micro"] for t in timeline), default=0)
     for t in timeline:
@@ -85,6 +91,7 @@ def summarize(events: list[dict]) -> dict:
         t["bar_pct"] = round(100 * t["actual_micro"] / max_actual, 1) if max_actual else 0.0
 
     saved_micro = max(projected_micro - spent_micro, 0)
+    overshoot_hops = sum(1 for t in timeline if t.get("overshoot"))
     return {
         "run_id": events[0]["run_id"] if events else "",
         "status": status,
@@ -99,6 +106,8 @@ def summarize(events: list[dict]) -> dict:
         "spent_disp": _money(_usd(spent_micro)),
         "projected_disp": _money(_usd(projected_micro)),
         "saved_disp": _money(_usd(saved_micro)),
+        "has_overshoot": overshoot_hops > 0,
+        "overshoot_hops": overshoot_hops,
         "timeline": timeline,
         "side_effects_fired": [t["node"] for t in timeline if t["side_effecting"]],
     }
@@ -129,9 +138,13 @@ def render_terminal(summary: dict) -> str:
     lines = [
         rule,
         head,
-        f" hops {r['hops']}   spent {r['spent_disp']}   budget {r['budget_disp']}",
-        f" projected uncapped {r['projected_disp']}  →  stopped at {r['spent_disp']}",
+        f" stopped at {r['spent_disp']}   budget {r['budget_disp']}   hops {r['hops']}",
+        f" projected (naive linear extrapolation, likely an underestimate): {r['projected_disp']}",
     ]
+    if r.get("has_overshoot"):
+        lines.append(
+            f" ⚠ {r['overshoot_hops']} hop(s): cap enforced one hop late — no max_tokens declared"
+        )
     if r["side_effects_fired"]:
         lines.append(f" ⚠ side-effects fired: {', '.join(r['side_effects_fired'])}")
     lines.append(rule)

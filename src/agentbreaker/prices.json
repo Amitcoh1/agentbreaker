@@ -1,0 +1,22 @@
+{
+  "version": "2026-07-21",
+  "_note": "Verify against provider pricing pages before launch (spec 8). Values are USD per 1M tokens.",
+  "models": {
+    "openai/gpt-4o": {"in_per_mtok_usd": 2.50, "out_per_mtok_usd": 10.00},
+    "openai/gpt-4o-mini": {"in_per_mtok_usd": 0.15, "out_per_mtok_usd": 0.60},
+    "openai/gpt-4.1": {"in_per_mtok_usd": 2.00, "out_per_mtok_usd": 8.00},
+    "openai/gpt-4.1-mini": {"in_per_mtok_usd": 0.40, "out_per_mtok_usd": 1.60},
+    "openai/gpt-4.1-nano": {"in_per_mtok_usd": 0.10, "out_per_mtok_usd": 0.40},
+    "openai/o3": {"in_per_mtok_usd": 2.00, "out_per_mtok_usd": 8.00},
+    "openai/o4-mini": {"in_per_mtok_usd": 1.10, "out_per_mtok_usd": 4.40},
+    "anthropic/claude-opus-4": {"in_per_mtok_usd": 15.00, "out_per_mtok_usd": 75.00},
+    "anthropic/claude-sonnet-4-6": {"in_per_mtok_usd": 3.00, "out_per_mtok_usd": 15.00},
+    "anthropic/claude-3-5-sonnet": {"in_per_mtok_usd": 3.00, "out_per_mtok_usd": 15.00},
+    "anthropic/claude-haiku-4-5": {"in_per_mtok_usd": 1.00, "out_per_mtok_usd": 5.00},
+    "anthropic/claude-3-5-haiku": {"in_per_mtok_usd": 0.80, "out_per_mtok_usd": 4.00},
+    "google/gemini-2.5-pro": {"in_per_mtok_usd": 1.25, "out_per_mtok_usd": 10.00},
+    "google/gemini-2.5-flash": {"in_per_mtok_usd": 0.30, "out_per_mtok_usd": 2.50},
+    "google/gemini-2.0-flash": {"in_per_mtok_usd": 0.10, "out_per_mtok_usd": 0.40}
+  },
+  "default_rate": {"in_per_mtok_usd": 5.00, "out_per_mtok_usd": 15.00}
+}

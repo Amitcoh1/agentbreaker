@@ -4,8 +4,8 @@ Outward-facing steps — these are yours to run (I can't publish or post for you
 
 ## Pre-flight (the week of launch)
 
-- [ ] **Re-verify `prices.json`** against each provider's current pricing page. This is the
-      one thing that gets fact-checked on HN within the hour. Bump the `version` date.
+- [ ] **Refresh `prices.json`** with `agentbreaker update-prices` (pulls current prices from
+      LiteLLM) and spot-check the headline models. Prices get fact-checked on HN within the hour.
 - [ ] **Re-verify the uniqueness claim.** Search the LangGraph ecosystem + recent LiteLLM
       releases for framework-native hierarchical escrow with pause/resume. If someone shipped
       it, soften the README's comparison table before posting.

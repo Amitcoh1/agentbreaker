@@ -26,6 +26,9 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6", "hypothesis>=6"]
 
+[project.scripts]
+agentbreaker = "agentbreaker.cli:main"
+
 [project.urls]
 Homepage = "https://github.com/amitcohen/agentbreaker"
 

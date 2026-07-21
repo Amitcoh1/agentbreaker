@@ -86,6 +86,12 @@ def run(source: str = DEFAULT_SOURCE, output: str | None = None, dry_run: bool =
             print(f"  ~ {k}: {old[k]} -> {new[k]}")
         return 0
 
-    out.write_text(json.dumps(table, indent=2) + "\n")
+    payload = json.dumps(table, indent=2) + "\n"
+    out.write_text(payload)
     print(f"wrote {len(new)} models to {out}")
+    # keep the dashboard's copy in sync when running from the repo (locked by pricing.test.ts)
+    dash = Path(__file__).resolve().parents[2] / "cloud" / "dashboard" / "lib" / "prices.json"
+    if dash.exists():
+        dash.write_text(payload)
+        print(f"synced dashboard copy: {dash}")
     return 0

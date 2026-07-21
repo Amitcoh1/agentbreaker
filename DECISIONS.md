@@ -91,3 +91,17 @@ Per spec §9.1: record decisions made where the spec was ambiguous or silent.
 - **Terminal summary prints on every finalize** (F4 lists it as an output). A library
   printing to stdout is mildly intrusive but it's the product's headline moment; the HTML
   path is also returned on `GuardedApp.last_report_path` and the trip exceptions.
+
+## Phase 4
+
+- **Demo uses real accumulating context + a real `max_tokens`**, not faked
+  `usage_metadata`. First cut faked inflated usage, which decoupled the reserve estimate
+  (real short-text tokens) from billed tokens (inflated) — the guard then stopped a hop late
+  at $1.10 on a $0.90 budget, which reads as a leaky budget. With a real ceiling the reserve
+  is a true upper bound, so the crossing call is blocked before it runs and the guard stops
+  strictly under budget ($0.82 < $0.90). Honest and tight beats a bigger scary number.
+- **`sample_receipt.html` is committed** as a viewable artifact; `reports/` is gitignored.
+- **PyPI publish + Show HN/Reddit are user-run** (see `LAUNCH.md`). The wheel was built and
+  verified locally (bundles `prices.json` + `template.html.j2`); it was not published.
+- **Prices remain unverified for launch** — `LAUNCH.md` makes re-verifying them the first
+  pre-flight item, since it's the most likely thing to get fact-checked on HN.

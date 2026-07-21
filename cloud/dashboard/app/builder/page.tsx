@@ -12,11 +12,12 @@ import {
   useEdgesState,
   useNodesState,
 } from "@xyflow/react";
-import { Copy, Download, FileUp, LayoutGrid, Plus, Save, X } from "lucide-react";
+import { Copy, Download, FileUp, HelpCircle, LayoutGrid, Plus, Save, X } from "lucide-react";
 import BudgetTree from "./BudgetTree";
 import BuilderNode from "./BuilderNode";
 import Inspector from "./Inspector";
 import TemplatesMenu from "./TemplatesMenu";
+import Tour, { type TourStep } from "./Tour";
 import { NodeIssues } from "./context";
 import {
   EXAMPLE_SPEC,
@@ -33,6 +34,24 @@ import { MODEL_NAMES } from "@/lib/pricing";
 const nodeTypes = { ab: BuilderNode };
 const STORAGE = "ab_builder_spec";
 const initial = specToFlow(EXAMPLE_SPEC);
+
+const TOUR: TourStep[] = [
+  {
+    selector: '[data-tour="palette"]',
+    title: "1 · Add nodes",
+    body: "Add models, tools, routers, start and end. Click a node on the canvas to edit it; drag from a handle to connect the flow.",
+  },
+  {
+    selector: '[data-tour="budget"]',
+    title: "2 · Set the budget",
+    body: "One dollar budget for the whole workflow, plus a sub-budget per model. Over-allocate and the tree turns brass and blocks export — the guard math is enforced here.",
+  },
+  {
+    selector: '[data-tour="generate"]',
+    title: "3 · Generate Python",
+    body: "When the graph is valid, generate readable guarded Python you run yourself. Nothing executes on our servers and your keys never leave your machine.",
+  },
+];
 
 const btn = (on: boolean) =>
   `inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium ${
@@ -164,7 +183,12 @@ export default function BuilderPage() {
 
       <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
         <h1 className="mr-2 font-semibold">Builder</h1>
-        <button onClick={() => setCode(generate(spec))} disabled={!canExport} className={btn(canExport)}>
+        <button
+          data-tour="generate"
+          onClick={() => setCode(generate(spec))}
+          disabled={!canExport}
+          className={btn(canExport)}
+        >
           Generate Python
         </button>
         <button
@@ -200,15 +224,24 @@ export default function BuilderPage() {
         >
           <Save className="h-4 w-4" /> Save
         </button>
-        {!canExport && (
-          <span className="ml-auto text-xs font-medium text-bad">
-            {result.errors.length} error(s) — fix to export
-          </span>
-        )}
+        <div className="ml-auto flex items-center gap-3">
+          {!canExport && (
+            <span className="text-xs font-medium text-bad">
+              {result.errors.length} error(s) — fix to export
+            </span>
+          )}
+          <button
+            onClick={() => window.dispatchEvent(new Event("ab-tour-start"))}
+            title="Take the guided tour"
+            className="text-muted hover:text-fg"
+          >
+            <HelpCircle className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       <div className="flex min-h-0 flex-1">
-        <div className="w-40 shrink-0 space-y-2 border-r border-border p-3">
+        <div data-tour="palette" className="w-40 shrink-0 space-y-2 border-r border-border p-3">
           <div className="text-xs font-semibold text-muted">Add node</div>
           {(["start", "model", "tool", "router", "end"] as const).map((t) => (
             <button
@@ -254,7 +287,7 @@ export default function BuilderPage() {
           </NodeIssues.Provider>
         </div>
 
-        <div className="w-80 shrink-0 space-y-3 overflow-y-auto border-l border-border p-3">
+        <div data-tour="budget" className="w-80 shrink-0 space-y-3 overflow-y-auto border-l border-border p-3">
           <BudgetTree spec={spec} />
           <GuardConfig
             config={config ?? {}}
@@ -287,6 +320,7 @@ export default function BuilderPage() {
       </div>
 
       {code !== null && <CodeModal code={code} onClose={() => setCode(null)} />}
+      <Tour steps={TOUR} storageKey="ab_tour_builder_v1" />
     </div>
   );
 }

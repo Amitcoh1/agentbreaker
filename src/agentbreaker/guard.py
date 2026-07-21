@@ -39,6 +39,7 @@ from agentbreaker.meter import (
     reconcile_usage,
 )
 from agentbreaker.pricing import PriceTable
+from agentbreaker.report.generate import render_terminal, write_report
 from agentbreaker.tripwire import TripReason, Tripwire
 
 _ROOT = "root"
@@ -103,6 +104,7 @@ class _Run:
     handler: BaseCallbackHandler = None  # set after construction
     thread_id: str | None = None
     config: dict | None = None
+    report_path: Path | None = None
     calls: dict[str, _Call] = field(default_factory=dict)
     side_effect_fired: list[str] = field(default_factory=list)
 
@@ -326,6 +328,7 @@ class GuardedApp:
         self.report_dir = Path(report_dir)
         self._runs: dict[str, _Run] = {}
         self._resumable: dict[str, _Run] = {}
+        self.last_report_path: Path | None = None
 
     # ---- public API ----
     def invoke(self, *args, **kwargs):
@@ -334,9 +337,10 @@ class GuardedApp:
     async def ainvoke(self, *args, **kwargs):
         run, args, kwargs = self._prepare(args, kwargs)
         try:
-            return await self.app.ainvoke(*args, **kwargs)
+            result = await self.app.ainvoke(*args, **kwargs)
         except _Trip as trip:
             return self._handle_trip(run, trip.reason)
+        return self._finish(run, result)
 
     def resume(self, checkpoint_id: str, extra_budget_usd: float):
         run = self._resumable.pop(checkpoint_id, None)
@@ -350,8 +354,7 @@ class GuardedApp:
             result = self.app.invoke(None, run.config)
         except _Trip as trip:
             return self._handle_trip(run, trip.reason)
-        run.eventlog.emit("finish", cumulative_microusd=run.ledger.total_spent())
-        return result
+        return self._finish(run, result)
 
     # ---- internals ----
     def _run_guarded(self, fn, args, kwargs):
@@ -360,8 +363,19 @@ class GuardedApp:
             result = fn(*args, **kwargs)
         except _Trip as trip:
             return self._handle_trip(run, trip.reason)
+        return self._finish(run, result)
+
+    def _finish(self, run: _Run, result):
         run.eventlog.emit("finish", cumulative_microusd=run.ledger.total_spent())
+        self._finalize(run)
         return result
+
+    def _finalize(self, run: _Run) -> Path:
+        html_path, summary = write_report(run.run_id, run.eventlog.path, self.report_dir)
+        run.report_path = html_path
+        self.last_report_path = html_path
+        print(render_terminal(summary))
+        return html_path
 
     def _prepare(self, args, kwargs):
         run = self._start_run()
@@ -388,6 +402,17 @@ class GuardedApp:
             self.budget_micro, self.max_hops, self.ttl_seconds, self.velocity_micro_per_min
         )
         eventlog = EventLog(run_id, self.report_dir / f"{run_id}.jsonl")
+        eventlog.emit(
+            "start",
+            detail={
+                "budget_micro": self.budget_micro,
+                "max_hops": self.max_hops,
+                "ttl_seconds": self.ttl_seconds,
+                "velocity_micro_per_min": self.velocity_micro_per_min,
+                "on_trip": self.on_trip,
+                "sub_budgets": {k: _to_micro(v) for k, v in self.sub_budgets.items()},
+            },
+        )
         run = _Run(run_id, ledger, tripwire, eventlog)
         run.handler = _BudgetHandler(self, run)
         return run
@@ -407,14 +432,15 @@ class GuardedApp:
 
     def _handle_trip(self, run: _Run, reason: TripReason):
         spent_usd = run.ledger.total_spent() / 1_000_000
-        report_path = run.eventlog.path
         if self.on_trip == "kill":
+            report_path = self._finalize(run)
             raise BudgetKilled(spent_usd, reason.value, report_path, list(run.side_effect_fired))
         checkpoint_id = self._checkpoint_id(run.config)
         run.eventlog.emit(
             "pause", cumulative_microusd=run.ledger.total_spent(),
             detail={"reason": reason.value, "checkpoint_id": checkpoint_id},
         )
+        report_path = self._finalize(run)
         self._resumable[checkpoint_id] = run
         raise BudgetPaused(checkpoint_id, spent_usd, reason.value, report_path)
 

@@ -114,11 +114,24 @@ Python 3.11+. Core deps: `langgraph`, `langchain-core`, `tiktoken`, `jinja2`.
   `unknown_model="default_rate"` to meter unknown models at a conservative rate instead of
   failing.
 
+## Cloud dashboard (optional)
+
+Everything above works with zero cloud. If you want a shared, **live** view of runs, point
+the guard at a Supabase-backed dashboard:
+
+```python
+app = guard(my_app, budget_usd=5.00, report_to="https://YOUR_REF.functions.supabase.co/ingest")
+```
+
+Events stream to the dashboard as the run executes (best-effort and non-blocking — a cloud
+outage never affects the run); each run gets a shareable, unlisted URL with a live timeline.
+Deploy runbook and code in [`cloud/`](cloud) (Supabase + Next.js on Vercel).
+
 ## Develop
 
 ```bash
 pip install -e ".[dev]"
-pytest -q          # 51 tests: pricing, ledger (+ hypothesis), tripwire, meter, guard, report
+pytest -q          # pricing, ledger (+ hypothesis), tripwire, meter, guard, report, sink
 ruff check .
 ```
 

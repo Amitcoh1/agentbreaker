@@ -105,3 +105,28 @@ Per spec §9.1: record decisions made where the spec was ambiguous or silent.
   verified locally (bundles `prices.json` + `template.html.j2`); it was not published.
 - **Prices remain unverified for launch** — `LAUNCH.md` makes re-verifying them the first
   pre-flight item, since it's the most likely thing to get fact-checked on HN.
+
+## Post-Phase-4 additions
+
+- **Publish-on-tag CI** (`.github/workflows/publish.yml`) uses PyPI **Trusted Publishing**
+  (OIDC), not a stored API token — needs a `pypi` GitHub environment + a pending publisher
+  on PyPI (documented in `LAUNCH.md`). It re-runs lint + tests before publishing.
+- **More models in `prices.json`** — added Mistral, DeepSeek, xAI, Cohere (21 total). Still
+  approximate; launch verification unchanged.
+
+## Phase 5 (optional cloud tier)
+
+- **`report_to=` is a stdlib-only, best-effort sink** (`sink.py`) — a daemon thread + urllib,
+  no new runtime dep. A failed POST is dropped, never raised, so the cloud tier can never
+  break a run. The core library is fully functional with `report_to` unset.
+- **The library streams the raw event rows** (for the live timeline) and the final `summary`
+  (for the run list) to one edge-function endpoint; the ingest key comes from
+  `AGENTBREAKER_INGEST_KEY` (env), not a `guard()` argument, so secrets stay out of code.
+- **`report_to` added to `guard()`** — an extension beyond the frozen §9.3 signature,
+  explicitly sanctioned by Phase 5 ("the middleware gains an optional `report_to=` config").
+- **Supabase RLS is public-read** (`runs.public` default true): a run URL is an unlisted,
+  shareable link. Ingest uses the service role inside the edge function, so no anon writes.
+  **Auth + team views are deferred** — the `runs.public` flag is the hook to build private
+  runs on later. This keeps Phase 5 to the demonstrable core (list + live timeline + share).
+- **Cloud is not deployed** — `cloud/` ships the migration, edge function, and Next.js app
+  plus a runbook; provisioning a Supabase project and Vercel deploy are user-run.

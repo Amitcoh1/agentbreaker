@@ -1,15 +1,24 @@
 # AgentBreaker
 
-**A circuit breaker + hierarchical dollar budget for LangGraph agents. In-process. No proxy.**
+**The visual agent builder that can't be hacked into — because there's nothing to hack.**
 
-> Your gateway caps your org's spend. AgentBreaker governs a single workflow from the
-> inside: hierarchical budgets across sub-agents, a safe pause instead of a mid-flight 429,
-> and a receipt showing exactly where the money went.
+> No server execution. No stored keys. Your graph becomes readable Python that runs on your
+> machine, wrapped in a hard dollar budget.
 
-Wrap a compiled LangGraph app in one call. Every model and tool dispatch inside the graph —
-including sub-agents and subgraphs — inherits one real-dollar budget. When a limit trips,
-the workflow stops **at the next hop boundary** (never mid-call) and drops a shareable HTML
-receipt of the run.
+Prototype anywhere; ship with AgentBreaker. You draw a workflow on a canvas, and it generates
+plain, editable LangGraph **Python** you download and run yourself — wrapped in `guard()`, a
+hierarchical dollar budget that stops runaway loops at a hop boundary and writes a receipt of
+exactly where the money went. Three things make it different:
+
+1. **Zero attack surface — codegen only.** No endpoint ever executes your flows; no provider
+   key is ever stored or transmitted. There's nothing on our side to compromise. (See
+   [Why no Run button?](#why-no-run-button))
+2. **Budget-first.** The only builder where hierarchical budget escrow, trip rules, and
+   side-effect tagging are part of the canvas itself.
+3. **Code you own.** The output is readable, hand-editable Python — scaffolding, not a walled
+   garden.
+
+## The budget (the library at the core)
 
 ```python
 from agentbreaker import guard
@@ -23,11 +32,13 @@ app = guard(
     on_trip="pause",           # "pause" | "kill"
 )
 
-result = app.invoke(inputs)    # same call you already make
+result = app.invoke(inputs)    # the same call you already make
 ```
 
-That's it. No proxy, no Docker, no gateway to run. Enforcement lives *inside* the process
-that makes the calls, so there's no direct-call bypass.
+Every model and tool dispatch inside the graph — including sub-agents and subgraphs —
+inherits one real-dollar budget. When a limit trips, the workflow stops **at the next hop
+boundary** (never mid-call) and drops a shareable HTML receipt. No proxy, no Docker, no
+gateway to run: enforcement lives *inside* your process, so there's no direct-call bypass.
 
 ## The demo
 
@@ -76,21 +87,56 @@ before it runs. Every run also writes a self-contained `report.html`:
   external assets) + JSON. Leads with the indisputable number — **stopped at $Y, budget $Z** —
   with the projection as clearly-labelled fine print.
 
-## How it composes with your gateway
+## Build it visually
 
-Gateways (LiteLLM, Portkey, Cloudflare, Kong) and AgentBreaker solve different layers.
-Run both: the gateway caps the org, AgentBreaker governs the workflow's internal structure.
+[`cloud/dashboard/app/builder`](cloud/dashboard/app/builder) is a drag-and-drop canvas
+(model / tool / router / start / end nodes) with a live **Budget Tree** — root budget →
+per-node allocations → unallocated remainder. Over-allocate and it turns red and **blocks
+export**. Hit **Generate** and you get the guarded Python above, ready to copy or download.
+Everything runs in your browser; the spec → Python codegen is shared with the `agentbreaker
+build spec.json` CLI and locked to it by golden-fixture tests (Python and TS, enforced in CI).
 
-| | Gateways / LiteLLM | AgentBreaker |
-|---|:---:|:---:|
-| Per-key / per-team dollar budget | ✅ | — *(use your gateway)* |
-| Flat per-session budget + max iterations | ✅ | ✅ |
-| In-process, zero infra (no proxy, no Docker) | — | ✅ |
-| Hierarchical parent→child escrow across sub-agents | — | ✅ |
-| Graceful pause/resume at a hop boundary (not a mid-flight 429) | — | ✅ |
-| Side-effect-aware, shareable run receipt | — | ✅ |
+```bash
+cd cloud/dashboard && npm install && npm run dev   # http://localhost:3000/builder
+```
 
-*Not a competitor to your gateway — a complement.*
+## Why no Run button?
+
+Server-side flow builders that run your graphs and hold your provider keys have been a
+repeated remote-code-execution target. In Langflow (the category leader, ~100k+ GitHub
+stars, IBM/DataStax-backed) the pattern is well documented and public:
+
+- **CVE-2025-3248** (CVSS 9.8) — unauthenticated RCE via a code-validation endpoint that
+  passed user input to `exec()`; on CISA's KEV list, used to deploy the Flodrix botnet.
+- **CVE-2025-34291** (CVSS 9.4) — an account-takeover chain that also **exfiltrates the API
+  keys stored in a workspace**; on CISA KEV, used by the MuddyWater APT for initial access.
+- **CVE-2026-33017** (CVSS 9.8) — unauthenticated RCE via the public flow-build endpoint;
+  on CISA KEV, weaponized within ~20 hours of disclosure to drop cryptominers.
+- **CVE-2026-5027** (CVSS 8.8) — path-traversal RCE via file upload, with ~7,000 exposed
+  instances observed under active exploitation.
+
+This isn't a knock on Langflow's product — it's an architectural fact: **a server that runs
+your flows and holds your keys is a high-value target.** AgentBreaker removes the target. The
+canvas only ever produces a Python *string* you run yourself, and your API keys live in your
+own environment — never in a dashboard, database, or edge function. There's no endpoint to
+exploit because no endpoint executes anything. That's the trade: you give up one-click cloud
+runs, and in exchange there is nothing to breach. **Prototype in a tool like Langflow if you
+like; ship the production-safe version here.**
+
+## How it compares (facts only)
+
+| | Langflow | LiteLLM budgets | AgentBreaker |
+|---|:---:|:---:|:---:|
+| Visual graph building | ✅ rich | — | ✅ budget-first |
+| Server executes your flows | ✅ *(attack surface)* | n/a | ❌ by design |
+| Stores your provider keys | ✅ | ✅ *(proxy)* | ❌ never |
+| Hierarchical per-agent dollar escrow | — | — *(flat session)* | ✅ |
+| Graceful pause/resume at a hop boundary | — | — *(hard error)* | ✅ |
+| Output is plain, editable Python | partial *(export)* | n/a | ✅ core promise |
+
+LiteLLM/Portkey/Kong-style gateways solve a different layer (org-wide per-key spend) and
+compose fine alongside this — the gateway caps the org, AgentBreaker governs one workflow's
+internal structure. Every claim above maps to a public, verifiable fact.
 
 ## Install
 

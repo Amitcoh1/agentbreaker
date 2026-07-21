@@ -18,16 +18,22 @@ Outward-facing steps — these are yours to run (I can't publish or post for you
 
 ## Build & publish to PyPI
 
+**Automated (preferred):** `.github/workflows/publish.yml` builds, re-runs lint+tests, and
+publishes on a `v*` tag via **Trusted Publishing** (OIDC — no stored token). One-time setup:
+
+1. On PyPI: add a *pending publisher* for the project (owner/repo, workflow `publish.yml`,
+   environment `pypi`).
+2. On GitHub: create an environment named `pypi`.
+3. Then: `git tag v0.1.0 && git push --tags` — CI does the rest.
+
+**Manual fallback:**
+
 ```bash
 pip install build twine
-python -m build                     # -> dist/*.whl and *.tar.gz
-twine check dist/*
-# test install in a clean venv from the wheel before publishing
-twine upload --repository testpypi dist/*   # smoke test
-twine upload dist/*                          # the real thing
+python -m build && twine check dist/*
+twine upload --repository testpypi dist/*   # smoke test in a clean venv first
+twine upload dist/*
 ```
-
-Tag the release: `git tag v0.1.0 && git push --tags` (CI can publish on tag later).
 
 ## Post
 

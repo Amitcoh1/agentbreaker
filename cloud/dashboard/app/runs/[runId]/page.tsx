@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { supabase, type Run, type RunEvent } from "@/lib/supabase";
-import Timeline from "./timeline";
+import RunDetail from "./RunDetail";
 
 export const dynamic = "force-dynamic";
 
@@ -14,20 +14,16 @@ export default async function RunPage({ params }: { params: Promise<{ runId: str
 
   if (!run) {
     return (
-      <main className="wrap">
-        <p className="muted">
-          Run not found (or not public). <Link href="/">← all runs</Link>
+      <div className="p-8">
+        <p className="text-muted">
+          Run not found (or not public).{" "}
+          <Link href="/runs" className="text-primary hover:underline">
+            ← all runs
+          </Link>
         </p>
-      </main>
+      </div>
     );
   }
 
-  return (
-    <main className="wrap">
-      <p>
-        <Link href="/">← all runs</Link>
-      </p>
-      <Timeline run={run as Run} initialEvents={(events ?? []) as RunEvent[]} />
-    </main>
-  );
+  return <RunDetail run={run as Run} initialEvents={(events ?? []) as RunEvent[]} />;
 }

@@ -1,4 +1,4 @@
-// AgentBreaker live control — Supabase Edge Function (Deno).
+// Breakerbox live control — Supabase Edge Function (Deno).
 //
 //   GET  ?run_id=...   the library polls; returns the oldest pending command and marks it
 //                      applied. Auth: x-ingest-key (the library is trusted).

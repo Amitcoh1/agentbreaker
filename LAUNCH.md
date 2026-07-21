@@ -49,7 +49,7 @@ twine upload dist/*
 
 ## Show HN — three title options (all factual, none dunk)
 
-1. `Show HN: AgentBreaker – a visual agent builder that generates Python and runs nothing server-side`
+1. `Show HN: Breakerbox – a visual agent builder that generates Python and runs nothing server-side`
 2. `Show HN: Budget-first agent builder – draw a graph, get guarded LangGraph Python, no stored keys`
 3. `Show HN: We removed the Run button from our agent builder (no server execution, no key storage)`
 
@@ -65,7 +65,7 @@ answer with the table row (flat session vs. hierarchical per-agent escrow), not 
 > (2) visual builders that execute your flows server-side and store your provider keys have
 > been a repeated RCE target (four public, CISA-KEV Langflow CVEs in <18 months).
 >
-> AgentBreaker is my take on avoiding both. You build a LangGraph workflow on a canvas, and it
+> Breakerbox is my take on avoiding both. You build a LangGraph workflow on a canvas, and it
 > **generates plain, editable Python** wrapped in a hierarchical dollar budget (`guard()`).
 > Nothing runs on a server; your keys stay in your own environment. The builder has a live
 > **Budget Tree** — over-allocate a node's sub-budget past the parent and it blocks export.
@@ -81,7 +81,7 @@ answer with the table row (flat session vs. hierarchical per-agent escrow), not 
 > visual "flow builders" that run your graphs server-side — a pattern behind a string of
 > actively-exploited RCEs and stolen API keys.
 >
-> So I built AgentBreaker differently. It's a visual agent builder that **generates Python you
+> So I built Breakerbox differently. It's a visual agent builder that **generates Python you
 > run yourself** — there's no server executing your flow and no place we store your keys, so
 > there's nothing to breach. And budgets are first-class: you set a hard dollar limit on the
 > canvas, over-allocation is blocked before you can export, and a runaway stops at a safe

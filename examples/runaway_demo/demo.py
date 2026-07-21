@@ -1,4 +1,4 @@
-"""AgentBreaker runaway demo: a context-accumulation loop, unguarded vs guarded.
+"""Breakerbox runaway demo: a context-accumulation loop, unguarded vs guarded.
 
 No API keys needed. A fake model reports realistic, growing token usage so the
 runaway is deterministic and offline. The SAME metering engine bills both runs, so

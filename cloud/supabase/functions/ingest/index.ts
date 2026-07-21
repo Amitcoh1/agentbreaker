@@ -1,4 +1,4 @@
-// AgentBreaker event ingest — Supabase Edge Function (Deno).
+// Breakerbox event ingest — Supabase Edge Function (Deno).
 //
 // The library's report_to= sink POSTs { run_id, events[], summary? } here. We verify
 // a shared secret and upsert with the service role (bypassing RLS). Events are

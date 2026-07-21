@@ -43,7 +43,7 @@ change the shape of the attack surface.
 
 ## Our answer: generate code, execute nothing
 
-AgentBreaker's builder is **codegen-only**. You draw the graph on a canvas, and the app
+Breakerbox's builder is **codegen-only**. You draw the graph on a canvas, and the app
 produces a plain Python *string* — readable LangGraph wrapped in our `guard()` budget. That's
 the entire output. There is:
 
@@ -61,7 +61,7 @@ because the precondition — a server that runs your code — was removed.
 ## What you give up, honestly
 
 One-click cloud runs. With Langflow you can hit Run and watch it execute without leaving the
-browser. With AgentBreaker you copy the generated file and run it yourself:
+browser. With Breakerbox you copy the generated file and run it yourself:
 `python workflow.py`. That's a real ergonomic cost, and for quick throwaway prototyping a
 run-it-here builder is genuinely nicer. Our bet is that for anything you'd put in production,
 "the builder cannot be turned into RCE and cannot leak my keys" is worth one extra command.

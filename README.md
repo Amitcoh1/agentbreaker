@@ -1,11 +1,26 @@
-# AgentBreaker
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/logo-dark.svg">
+    <img alt="Breakerbox" src="docs/brand/logo-light.svg" width="360">
+  </picture>
+</p>
 
-**The visual agent builder that can't be hacked into — because there's nothing to hack.**
+<p align="center"><strong>The visual agent builder that can't be hacked into — because there's nothing to hack.</strong></p>
 
-> No server execution. No stored keys. Your graph becomes readable Python that runs on your
-> machine, wrapped in a hard dollar budget.
+<p align="center">No server execution&nbsp;·&nbsp;No stored keys&nbsp;·&nbsp;Codegen only</p>
 
-Prototype anywhere; ship with AgentBreaker. You draw a workflow on a canvas, and it generates
+<p align="center">
+  <a href="https://github.com/Amitcoh1/agentbreaker/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Amitcoh1/agentbreaker/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-1f2328.svg"></a>
+  <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-1f2328.svg">
+  <a href="https://github.com/Amitcoh1/agentbreaker/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/Amitcoh1/agentbreaker?color=b8860b"></a>
+</p>
+
+<p align="center">
+  <img src="docs/brand/shots/builder.png" alt="The Breakerbox builder: a graph canvas, a live Budget Tree, and guard config" width="820">
+</p>
+
+Prototype anywhere; ship with **Breakerbox**. You draw a workflow on a canvas, and it generates
 plain, editable LangGraph **Python** you download and run yourself — wrapped in `guard()`, a
 hierarchical dollar budget that stops runaway loops at a hop boundary and writes a receipt of
 exactly where the money went. Three things make it different:
@@ -18,7 +33,30 @@ exactly where the money went. Three things make it different:
 3. **Code you own.** The output is readable, hand-editable Python — scaffolding, not a walled
    garden.
 
-## The budget (the library at the core)
+> **Breakerbox** is the product; the Python package is **`agentbreaker`** (`pip install
+> agentbreaker`). The import, CLI, and API names are unchanged.
+
+## Contents
+
+- [Quickstart](#quickstart)
+- [The demo](#the-demo)
+- [What it actually does](#what-it-actually-does)
+- [Build it visually](#build-it-visually)
+- [Why no Run button?](#why-no-run-button)
+- [How it compares](#how-it-compares-facts-only)
+- [Notes & limitations](#notes--limitations-read-before-you-rely-on-it)
+- [Cloud dashboard (optional)](#cloud-dashboard-optional)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Quickstart
+
+```bash
+pip install agentbreaker
+```
+
+Wrap the compiled LangGraph app you already have — the call site doesn't change:
 
 ```python
 from agentbreaker import guard
@@ -40,6 +78,12 @@ inherits one real-dollar budget. When a limit trips, the workflow stops **at the
 boundary** (never mid-call) and drops a shareable HTML receipt. No proxy, no Docker, no
 gateway to run: enforcement lives *inside* your process, so there's no direct-call bypass.
 
+Prefer to start on the canvas? Open the builder, draw the graph, and let it write this for you:
+
+```bash
+cd cloud/dashboard && npm install && npm run dev   # http://localhost:3000/builder
+```
+
 ## The demo
 
 A broken retry loop that never drops its context, so each hop costs more than the last
@@ -59,7 +103,7 @@ before it runs. Every run also writes a self-contained `report.html`:
 
 ```
 ────────────────────────────────────────────────────────
- AgentBreaker receipt · killed (budget)
+ breakerbox receipt · killed (budget)
  stopped at $0.8157   budget $0.9000   hops 13
  projected (naive linear extrapolation, likely an underestimate): $3.13
 ────────────────────────────────────────────────────────
@@ -96,10 +140,6 @@ export**. Hit **Generate** and you get the guarded Python above, ready to copy o
 Everything runs in your browser; the spec → Python codegen is shared with the `agentbreaker
 build spec.json` CLI and locked to it by golden-fixture tests (Python and TS, enforced in CI).
 
-```bash
-cd cloud/dashboard && npm install && npm run dev   # http://localhost:3000/builder
-```
-
 ## Why no Run button?
 
 Server-side flow builders that run your graphs and hold your provider keys have been a
@@ -116,7 +156,7 @@ stars, IBM/DataStax-backed) the pattern is well documented and public:
   instances observed under active exploitation.
 
 This isn't a knock on Langflow's product — it's an architectural fact: **a server that runs
-your flows and holds your keys is a high-value target.** AgentBreaker removes the target. The
+your flows and holds your keys is a high-value target.** Breakerbox removes the target. The
 canvas only ever produces a Python *string* you run yourself, and your API keys live in your
 own environment — never in a dashboard, database, or edge function. There's no endpoint to
 exploit because no endpoint executes anything. That's the trade: you give up one-click cloud
@@ -125,7 +165,7 @@ like; ship the production-safe version here.**
 
 ## How it compares (facts only)
 
-| | Langflow | LiteLLM budgets | AgentBreaker |
+| | Langflow | LiteLLM budgets | Breakerbox |
 |---|:---:|:---:|:---:|
 | Visual graph building | ✅ rich | — | ✅ budget-first |
 | Server executes your flows | ✅ *(attack surface)* | n/a | ❌ by design |
@@ -135,16 +175,8 @@ like; ship the production-safe version here.**
 | Output is plain, editable Python | partial *(export)* | n/a | ✅ core promise |
 
 LiteLLM/Portkey/Kong-style gateways solve a different layer (org-wide per-key spend) and
-compose fine alongside this — the gateway caps the org, AgentBreaker governs one workflow's
+compose fine alongside this — the gateway caps the org, Breakerbox governs one workflow's
 internal structure. Every claim above maps to a public, verifiable fact.
-
-## Install
-
-```bash
-pip install agentbreaker
-```
-
-Python 3.11+. Core deps: `langgraph`, `langchain-core`, `tiktoken`, `jinja2`.
 
 ## Notes & limitations (read before you rely on it)
 
@@ -173,7 +205,16 @@ Events stream to the dashboard as the run executes (best-effort and non-blocking
 outage never affects the run); each run gets a shareable, unlisted URL with a live timeline.
 Deploy runbook and code in [`cloud/`](cloud) (Supabase + Next.js on Vercel).
 
-## Develop
+## Roadmap
+
+Where this is headed — horizons, what we will and won't build — is public in
+[`ROADMAP.md`](ROADMAP.md). The codegen-only, no-stored-keys architecture is a permanent
+constraint, not a phase.
+
+## Contributing
+
+Issues and PRs welcome. Good first stops: the open [issues](https://github.com/Amitcoh1/agentbreaker/issues)
+and the [`ROADMAP.md`](ROADMAP.md) horizons. To work on it locally:
 
 ```bash
 pip install -e ".[dev]"
@@ -181,6 +222,9 @@ pytest -q          # pricing, ledger (+ hypothesis), tripwire, meter, guard, rep
 ruff check .
 ```
 
+The dashboard (`cloud/dashboard`) has its own checks: `npm run typecheck`, `npm run lint`,
+`npm test` (codegen + price-table parity), `npm run build`. CI runs both suites on every push.
+
 ## License
 
-MIT
+[MIT](LICENSE)

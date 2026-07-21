@@ -34,7 +34,7 @@ Click **Copy** (or **Download .py**).
 
 **0:52 — The receipt.** Show the terminal receipt from a runaway that tripped:
 ```
- AgentBreaker receipt · killed (budget)
+ Breakerbox receipt · killed (budget)
  stopped at $0.87   budget $0.90   hops 12
  projected (naive linear extrapolation, likely an underestimate): $9.40
 ```

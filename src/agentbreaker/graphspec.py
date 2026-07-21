@@ -1,4 +1,4 @@
-"""AgentBreaker graph spec: a versioned JSON interchange format + a validator.
+"""Breakerbox graph spec: a versioned JSON interchange format + a validator.
 
 The spec (see graph.example.json) is what the visual builder produces and codegen consumes.
 The validator is hand-rolled (no jsonschema dep — a JSON Schema only covers structure; our

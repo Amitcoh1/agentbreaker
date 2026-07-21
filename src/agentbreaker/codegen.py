@@ -25,13 +25,20 @@ def _ident(raw: str, used: set[str]) -> str:
     return s
 
 
-def _fmt(v) -> str:
+# Number formatting is FIELD-aware (not Python-type-aware) so the TS mirror can match it:
+# JSON/JS can't tell 5.0 from 5, so we decide float-vs-int by which field it is, not by type.
+def _money(v) -> str:
+    f = float(v)
+    return f"{int(f)}.0" if f.is_integer() else repr(f)
+
+
+def _int(v) -> str:
+    return str(int(v))
+
+
+def _fmt(v) -> str:  # strings / bools (router labels)
     if isinstance(v, bool):
         return "True" if v else "False"
-    if isinstance(v, int):
-        return str(v)
-    if isinstance(v, float):
-        return repr(v)
     if isinstance(v, str):
         return '"' + v.replace("\\", "\\\\").replace('"', '\\"') + '"'
     return repr(v)
@@ -125,16 +132,21 @@ def generate(spec: dict) -> str:
         lines.append(f'builder.add_conditional_edges("{rid}", {fn_of[rid]}_route, {{{mapping}}})')
 
     # guard(...) — only the config keys that are present
-    kw = [f"    budget_usd={_fmt(config['budget_usd'])}," if "budget_usd" in config else ""]
-    for key in ("max_hops", "ttl_seconds", "velocity_usd_per_min"):
-        if key in config:
-            kw.append(f"    {key}={_fmt(config[key])},")
+    kw = []
+    if "budget_usd" in config:
+        kw.append(f"    budget_usd={_money(config['budget_usd'])},")
+    if "max_hops" in config:
+        kw.append(f"    max_hops={_int(config['max_hops'])},")
+    if "ttl_seconds" in config:
+        kw.append(f"    ttl_seconds={_int(config['ttl_seconds'])},")
+    if "velocity_usd_per_min" in config:
+        kw.append(f"    velocity_usd_per_min={_money(config['velocity_usd_per_min'])},")
     if "on_trip" in config:
         kw.append(f'    on_trip="{config["on_trip"]}",')
     sub = {n["id"]: n["sub_budget_usd"] for n in nodes
            if n.get("type") == "model" and "sub_budget_usd" in n}
     if sub:
-        items = ", ".join(f'"{k}": {_fmt(v)}' for k, v in sub.items())
+        items = ", ".join(f'"{k}": {_money(v)}' for k, v in sub.items())
         kw.append(f"    sub_budgets={{{items}}},")
 
     lines += [

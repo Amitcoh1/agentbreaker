@@ -1,8 +1,8 @@
-import { Activity, Coins, Layers, PiggyBank } from "lucide-react";
-import { AvertedGauge, ChartCard, SpendByModel, SpendOverTime, TopNodes } from "@/components/Charts";
+import { Activity, Coins, Gauge, PiggyBank } from "lucide-react";
+import { ChartCard, SpendOverTime } from "@/components/Charts";
 import { RunsTable } from "@/components/RunsTable";
 import { StatCard, StatGrid } from "@/components/StatCard";
-import { usd } from "@/lib/format";
+import { microToUsd, usd } from "@/lib/format";
 import {
   isActive,
   supabase,
@@ -13,6 +13,32 @@ import {
 } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
+
+// A compact "top cost drivers" list — replaces two full recharts panels with one glanceable
+// ranked list per dimension (node, model). Bars are plain divs; no chart runtime needed.
+function DriverList({ rows }: { rows: { name: string; value: number; meta?: string }[] }) {
+  const max = rows.reduce((m, r) => Math.max(m, r.value), 0);
+  if (!rows.length) return <div className="text-xs text-muted">No spend recorded yet.</div>;
+  return (
+    <div className="space-y-2.5">
+      {rows.map((r) => (
+        <div key={r.name} className="flex items-center gap-3">
+          <span className="w-28 shrink-0 truncate text-xs" title={r.name}>
+            {r.name}
+          </span>
+          <div className="h-1.5 flex-1 rounded bg-ink/5">
+            <div
+              className="h-1.5 rounded bg-ink/70"
+              style={{ width: `${max > 0 ? (r.value / max) * 100 : 0}%` }}
+            />
+          </div>
+          {r.meta && <span className="w-14 shrink-0 text-right text-[11px] text-muted">{r.meta}</span>}
+          <span className="num w-16 shrink-0 text-right text-xs">{usd(r.value)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default async function Overview() {
   const db = supabase();
@@ -28,6 +54,17 @@ export default async function Overview() {
   const active = rs.filter(isActive).length;
   const avertedPct = saved + spent > 0 ? (saved / (saved + spent)) * 100 : 0;
 
+  // Budget utilization: of the dollars runs were allowed to spend, how many they used.
+  const budgeted = rs.reduce((a, r) => a + (r.budget_usd ?? 0), 0);
+  const utilPct = budgeted > 0 ? Math.min(999, (spent / budgeted) * 100) : 0;
+
+  const topNodes = ((byNode ?? []) as SBN[])
+    .slice(0, 5)
+    .map((n) => ({ name: n.node, value: microToUsd(n.spent_microusd), meta: `${n.hops} hops` }));
+  const topModels = ((byModel ?? []) as SBM[])
+    .slice(0, 5)
+    .map((m) => ({ name: m.model.split("/").pop() ?? m.model, value: microToUsd(m.spent_microusd), meta: `${m.calls} calls` }));
+
   return (
     <div className="space-y-6 p-6 lg:p-8">
       <header>
@@ -36,41 +73,44 @@ export default async function Overview() {
       </header>
 
       <StatGrid>
-        <StatCard label="Total spent" value={usd(spent)} sub={`${rs.length} runs`} icon={Coins} tone="blue" />
+        <StatCard label="Total spent" value={usd(spent)} sub={`across ${rs.length} runs`} icon={Coins} />
         <StatCard
           label="Waste averted"
           value={usd(saved)}
-          sub={`${avertedPct.toFixed(0)}% of projected`}
+          sub={`${avertedPct.toFixed(0)}% of projected spend`}
           icon={PiggyBank}
-          tone="green"
         />
-        <StatCard label="Active runs" value={String(active)} sub="currently guarded" icon={Activity} tone="amber" />
-        <StatCard label="Runs" value={String(rs.length)} sub="most recent 50" icon={Layers} tone="blue" />
+        <StatCard
+          label="Active runs"
+          value={String(active)}
+          sub="currently guarded"
+          icon={Activity}
+          brass={active > 0}
+        />
+        <StatCard
+          label="Budget used"
+          value={budgeted > 0 ? `${utilPct.toFixed(0)}%` : "—"}
+          sub={budgeted > 0 ? `${usd(spent)} of ${usd(budgeted)} allocated` : "no budgets set"}
+          icon={Gauge}
+        />
       </StatGrid>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <ChartCard title="Spend over time" sub="daily, public runs">
-            <SpendOverTime data={(daily ?? []) as DailySpend[]} />
-          </ChartCard>
-        </div>
-        <ChartCard title="Waste averted" sub="saved vs. projected">
-          <AvertedGauge pct={avertedPct} saved={usd(saved)} />
-        </ChartCard>
-      </div>
+      <ChartCard title="Spend over time" sub="daily, across public runs">
+        <SpendOverTime data={(daily ?? []) as DailySpend[]} />
+      </ChartCard>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <ChartCard title="Spend by model">
-          <SpendByModel data={(byModel ?? []) as SBM[]} />
+        <ChartCard title="Top cost nodes" sub="where the money goes in the graph">
+          <DriverList rows={topNodes} />
         </ChartCard>
-        <ChartCard title="Top cost nodes">
-          <TopNodes data={(byNode ?? []) as SBN[]} />
+        <ChartCard title="Spend by model" sub="which models cost the most">
+          <DriverList rows={topModels} />
         </ChartCard>
       </div>
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-muted">Recent runs</h2>
-        <RunsTable runs={rs.slice(0, 8)} />
+        <RunsTable runs={rs.slice(0, 6)} />
       </section>
     </div>
   );

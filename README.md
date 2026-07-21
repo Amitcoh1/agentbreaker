@@ -140,6 +140,14 @@ export**. Hit **Generate** and you get the guarded Python above, ready to copy o
 Everything runs in your browser; the spec → Python codegen is shared with the `agentbreaker
 build spec.json` CLI and locked to it by golden-fixture tests (Python and TS, enforced in CI).
 
+**AI suggest (bring your own key).** Any model/tool/router node has an optional "Suggest code"
+helper: describe the step, and it drafts a Python body for you to copy in. It calls the model
+**directly from your browser with your own API key** — the key is stored only in your browser
+and sent only to the provider, never to a Breakerbox server (there is no server in this path).
+Anthropic supports browser-direct calls; OpenAI blocks browser CORS, so for OpenAI you point the
+base URL at your own CORS-enabled proxy. The suggestion is copy-paste scaffolding — it's never
+written into the saved graph, so codegen stays deterministic.
+
 ## Why no Run button?
 
 Server-side flow builders that run your graphs and hold your provider keys have been a

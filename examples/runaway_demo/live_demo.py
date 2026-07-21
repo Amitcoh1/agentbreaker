@@ -88,7 +88,7 @@ def main() -> None:
     ap.add_argument("--ingest-url", required=True)
     ap.add_argument("--control-url", default=None)
     ap.add_argument("--control-key", default=None)
-    ap.add_argument("--self-kill", action="store_true", help="issue a kill from this script after 4s")
+    ap.add_argument("--self-kill", action="store_true", help="self-issue a kill after 4s")
     ap.add_argument("--loops", type=int, default=40)
     args = ap.parse_args()
 

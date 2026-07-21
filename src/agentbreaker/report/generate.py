@@ -67,7 +67,9 @@ def summarize(events: list[dict]) -> dict:
             terminal = e["type"]
     status = {"trip": "killed", "pause": "paused", "finish": "completed"}.get(terminal, "unknown")
     trip = next((e for e in events if e["type"] == "trip"), None)
-    trip_reason = (trip.get("detail") or {}).get("reason") if trip and status != "completed" else None
+    trip_reason = None
+    if trip and status != "completed":
+        trip_reason = (trip.get("detail") or {}).get("reason")
 
     spent_micro = timeline[-1]["cumulative_micro"] if timeline else 0
     cost_hops = sum(1 for t in timeline if t["actual_micro"] > 0)

@@ -6,15 +6,17 @@ import {
   type Connection,
   Controls,
   type Edge,
+  MiniMap,
   ReactFlow,
   addEdge,
   useEdgesState,
   useNodesState,
 } from "@xyflow/react";
-import { Copy, Download, FileUp, Plus, Save, X } from "lucide-react";
+import { Copy, Download, FileUp, LayoutGrid, Plus, Save, X } from "lucide-react";
 import BudgetTree from "./BudgetTree";
 import BuilderNode from "./BuilderNode";
 import Inspector from "./Inspector";
+import { NodeIssues } from "./context";
 import {
   EXAMPLE_SPEC,
   type GraphSpec,
@@ -24,7 +26,9 @@ import {
   toJson,
   validate,
 } from "@/lib/graphspec";
-import { type FlowNode, flowToSpec, newNode, specToFlow } from "@/lib/graphflow";
+import { type FlowNode, flowToSpec, newNode, nodeIssues, specToFlow } from "@/lib/graphflow";
+import { MODEL_NAMES } from "@/lib/pricing";
+import { TEMPLATES } from "@/lib/templates";
 
 const nodeTypes = { ab: BuilderNode };
 const STORAGE = "ab_builder_spec";
@@ -63,6 +67,7 @@ export default function BuilderPage() {
 
   const spec = useMemo(() => flowToSpec(nodes, edges, config), [nodes, edges, config]);
   const result = useMemo(() => validate(spec), [spec]);
+  const issues = useMemo(() => nodeIssues(spec), [spec]);
   const canExport = result.ok;
 
   const onConnect = useCallback(
@@ -86,10 +91,55 @@ export default function BuilderPage() {
       nds.map((n) => (n.id === id ? { ...n, data: { spec: { ...n.data.spec, ...patch } } } : n)),
     );
 
+  const renameNode = (oldId: string, newId: string) => {
+    if (!newId || newId === oldId || nodes.some((n) => n.id === newId)) return;
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === oldId ? { ...n, id: newId, data: { spec: { ...n.data.spec, id: newId } } } : n,
+      ),
+    );
+    setEdges((eds) =>
+      eds.map((e) => ({
+        ...e,
+        source: e.source === oldId ? newId : e.source,
+        target: e.target === oldId ? newId : e.target,
+      })),
+    );
+    if (selNode === oldId) setSelNode(newId);
+  };
+
+  const duplicateNode = (id: string) => {
+    const src = nodes.find((n) => n.id === id);
+    if (!src) return;
+    const ids = new Set(nodes.map((n) => n.id));
+    let nid = `${id}_copy`;
+    let i = 1;
+    while (ids.has(nid)) nid = `${id}_copy${i++}`;
+    setNodes((nds) => [
+      ...nds,
+      {
+        id: nid,
+        type: "ab",
+        position: { x: src.position.x + 48, y: src.position.y + 48 },
+        data: { spec: { ...src.data.spec, id: nid } },
+      },
+    ]);
+    setSelNode(nid);
+  };
+
   const deleteNode = (id: string) => {
     setNodes((nds) => nds.filter((n) => n.id !== id));
     setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
     setSelNode(null);
+  };
+
+  const load = (s: GraphSpec) => {
+    const f = specToFlow(s);
+    setNodes(f.nodes);
+    setEdges(f.edges);
+    setConfig(s.config);
+    setSelNode(null);
+    setSelEdge(null);
   };
 
   const download = (name: string, text: string, type: string) => {
@@ -101,21 +151,17 @@ export default function BuilderPage() {
     URL.revokeObjectURL(url);
   };
 
-  const importSpec = async (file: File) => {
-    const s = fromJson(await file.text());
-    const f = specToFlow(s);
-    setNodes(f.nodes);
-    setEdges(f.edges);
-    setConfig(s.config);
-    setSelNode(null);
-    setSelEdge(null);
-  };
-
   const selectedNode = nodes.find((n) => n.id === selNode);
   const selectedEdge = edges.find((e) => e.id === selEdge);
 
   return (
     <div className="flex h-dvh flex-col">
+      <datalist id="ab-models">
+        {MODEL_NAMES.map((m) => (
+          <option key={m} value={m} />
+        ))}
+      </datalist>
+
       <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
         <h1 className="mr-2 font-semibold">Builder</h1>
         <button onClick={() => setCode(generate(spec))} disabled={!canExport} className={btn(canExport)}>
@@ -140,9 +186,28 @@ export default function BuilderPage() {
             type="file"
             accept="application/json"
             className="hidden"
-            onChange={(e) => e.target.files?.[0] && importSpec(e.target.files[0])}
+            onChange={(e) => e.target.files?.[0] && e.target.files[0].text().then((t) => load(fromJson(t)))}
           />
         </label>
+        <button onClick={() => load(spec)} className={ghost(true)} title="Re-layout from the graph">
+          <LayoutGrid className="h-4 w-4" /> Auto-layout
+        </button>
+        <select
+          className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm outline-none focus:border-primary"
+          value=""
+          onChange={(e) => {
+            const t = TEMPLATES.find((x) => x.name === e.target.value);
+            if (t) load(t.spec);
+            e.currentTarget.value = "";
+          }}
+        >
+          <option value="">Templates…</option>
+          {TEMPLATES.map((t) => (
+            <option key={t.name} value={t.name}>
+              {t.name}
+            </option>
+          ))}
+        </select>
         <button onClick={() => localStorage.setItem(STORAGE, toJson(spec))} className={ghost(true)}>
           <Save className="h-4 w-4" /> Save
         </button>
@@ -168,31 +233,36 @@ export default function BuilderPage() {
         </div>
 
         <div className="min-w-0 flex-1">
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            nodeTypes={nodeTypes}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onNodeClick={(_, n) => {
-              setSelNode(n.id);
-              setSelEdge(null);
-            }}
-            onEdgeClick={(_, e) => {
-              setSelEdge(e.id);
-              setSelNode(null);
-            }}
-            onPaneClick={() => {
-              setSelNode(null);
-              setSelEdge(null);
-            }}
-            fitView
-            proOptions={{ hideAttribution: true }}
-          >
-            <Background color="#232A36" gap={20} />
-            <Controls showInteractive={false} />
-          </ReactFlow>
+          <NodeIssues.Provider value={issues}>
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              nodeTypes={nodeTypes}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onNodesDelete={() => setSelNode(null)}
+              onNodeClick={(_, n) => {
+                setSelNode(n.id);
+                setSelEdge(null);
+              }}
+              onEdgeClick={(_, e) => {
+                setSelEdge(e.id);
+                setSelNode(null);
+              }}
+              onPaneClick={() => {
+                setSelNode(null);
+                setSelEdge(null);
+              }}
+              deleteKeyCode={["Backspace", "Delete"]}
+              fitView
+              proOptions={{ hideAttribution: true }}
+            >
+              <Background color="#232A36" gap={20} />
+              <Controls showInteractive={false} />
+              <MiniMap pannable className="!bg-surface" nodeColor={() => "#3B82F6"} />
+            </ReactFlow>
+          </NodeIssues.Provider>
         </div>
 
         <div className="w-80 shrink-0 space-y-3 overflow-y-auto border-l border-border p-3">
@@ -203,9 +273,12 @@ export default function BuilderPage() {
           />
           {selectedNode && (
             <Inspector
+              key={selectedNode.id}
               node={selectedNode.data.spec}
               onChange={(p) => patchNode(selectedNode.id, p)}
+              onRename={(id) => renameNode(selectedNode.id, id)}
               onDelete={() => deleteNode(selectedNode.id)}
+              onDuplicate={() => duplicateNode(selectedNode.id)}
             />
           )}
           {selectedEdge && (
@@ -214,6 +287,10 @@ export default function BuilderPage() {
               onChange={(l) =>
                 setEdges((eds) => eds.map((e) => (e.id === selectedEdge.id ? { ...e, label: l } : e)))
               }
+              onDelete={() => {
+                setEdges((eds) => eds.filter((e) => e.id !== selectedEdge.id));
+                setSelEdge(null);
+              }}
             />
           )}
           <Messages result={result} />
@@ -293,10 +370,23 @@ function GuardConfig({
   );
 }
 
-function EdgeInspector({ label, onChange }: { label: string; onChange: (l: string) => void }) {
+function EdgeInspector({
+  label,
+  onChange,
+  onDelete,
+}: {
+  label: string;
+  onChange: (l: string) => void;
+  onDelete: () => void;
+}) {
   return (
     <div className="card space-y-2 p-4">
-      <div className="text-sm font-semibold">Edge</div>
+      <div className="flex items-center justify-between">
+        <div className="text-sm font-semibold">Edge</div>
+        <button onClick={onDelete} className="text-xs text-bad hover:underline">
+          delete
+        </button>
+      </div>
       <label className="block">
         <span className="text-xs text-muted">condition (router branch label)</span>
         <input

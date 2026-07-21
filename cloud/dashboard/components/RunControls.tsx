@@ -100,7 +100,7 @@ export default function RunControls({ run, events }: { run: Run; events: RunEven
             value={key}
             onChange={(e) => saveKey(e.target.value)}
             placeholder="CONTROL_KEY"
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary"
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-ink"
           />
         </div>
         <div className="card p-4">

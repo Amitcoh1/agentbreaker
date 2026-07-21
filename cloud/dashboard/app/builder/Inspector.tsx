@@ -8,7 +8,7 @@ import { isKnownModel, perCallUsd, usd } from "@/lib/pricing";
 import AiSuggest from "./AiSuggest";
 
 const INPUT =
-  "mt-1 w-full rounded border border-border bg-surface px-2 py-1 text-sm outline-none focus:border-primary";
+  "mt-1 w-full rounded border border-border bg-surface px-2 py-1 text-sm outline-none focus:border-ink";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (

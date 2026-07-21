@@ -54,7 +54,7 @@ export default function RunsExplorer({ initial }: { initial: Run[] }) {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search run id…"
-            className="w-64 rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm outline-none focus:border-primary"
+            className="w-64 rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm outline-none focus:border-ink"
           />
         </div>
         <div className="flex gap-1">

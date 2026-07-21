@@ -177,3 +177,25 @@ builder. Before that launch, three soft spots in the core were fixed:
   `actual > estimate and not declared_max`, the event carries `detail.overshoot` and the receipt
   shows **"cap enforced one hop late — no max_tokens declared."** This makes the one case where the
   guard can exceed budget (a single call with unbounded output) explicit rather than surprising.
+
+## Visual builder (Phases B–D) — codegen only, no server execution
+
+- **Permanent architectural stance:** the builder is codegen-only. There is no "Run in cloud",
+  no runner, no sandbox, and provider keys are never stored/transmitted. A spec becomes a Python
+  string the user downloads/copies and runs on their own machine. This is the positioning ("no
+  target to hack") — not a phase limitation.
+- **Spec + validator + codegen live canonically in Python** (`graphspec.py`, `codegen.py`),
+  pytest-tested. The browser needs the same client-side (no server), so `cloud/dashboard/
+  lib/graphspec.ts` **mirrors** them. Drift risk is contained by **3 shared golden fixtures**
+  (`tests/fixtures/graphspec/`: linear, router+cycle, over-allocation error) asserted on BOTH
+  sides — codegen output byte-for-byte AND validator messages — by `test_codegen.py` (Python)
+  and `graphspec.test.ts` (vitest).
+- **Number formatting is field-aware, not type-aware.** JSON/JS can't distinguish `5.0` from `5`,
+  so money fields (budget/sub_budget/velocity) format via `_money` ("5.0") and integer fields
+  (max_hops/ttl/max_tokens) via `_int` ("50") — decided by which field it is. This is what makes
+  byte-identical Python↔TS codegen possible.
+- **Validator is hand-rolled (no jsonschema dep).** A JSON Schema (`graph.schema.json`) ships for
+  editor support only; the semantic rules (budget-sum, connectivity, routers, cycles) are code.
+- **Builder saves to `localStorage`** for now; `0004_graphs.sql` (owner-scoped, RLS, `TODO(auth)`)
+  is prepared but unused until Supabase Auth lands.
+- **Golden fixtures are excluded from ruff** (`extend-exclude`) — they're generated artifacts.

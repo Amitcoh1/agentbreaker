@@ -31,7 +31,7 @@ export default function BudgetTree({ spec }: { spec: GraphSpec }) {
                 <span className="truncate">{n.id}</span>
                 <span className="num">${sub.toFixed(2)}</span>
               </div>
-              <div className="mt-1 h-2 rounded bg-white/5">
+              <div className="mt-1 h-2 rounded bg-ink/5">
                 <div className="h-2 rounded bg-primary" style={{ width: `${pct(sub)}%` }} />
               </div>
               <div className="mt-0.5 text-[11px] text-muted">

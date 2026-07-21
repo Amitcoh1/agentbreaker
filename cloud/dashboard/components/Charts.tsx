@@ -17,8 +17,8 @@ import {
 import { microToUsd, usd } from "@/lib/format";
 import type { DailySpend, SpendByModel as SBM, SpendByNode as SBN } from "@/lib/supabase";
 
-const AXIS = { stroke: "#8B949E", fontSize: 11 } as const;
-const GRID = "#232A36";
+const AXIS = { stroke: "#6b7280", fontSize: 11 } as const;
+const GRID = "#e6e3da";
 
 export function ChartCard({
   title,
@@ -65,15 +65,15 @@ export function SpendOverTime({ data }: { data: DailySpend[] }) {
         <AreaChart data={rows} margin={{ left: 4, right: 8, top: 8, bottom: 0 }}>
           <defs>
             <linearGradient id="g-spend" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.5} />
-              <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
+              <stop offset="0%" stopColor="#1f2328" stopOpacity={0.5} />
+              <stop offset="100%" stopColor="#1f2328" stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid stroke={GRID} vertical={false} />
           <XAxis dataKey="name" tick={AXIS} axisLine={false} tickLine={false} />
           <YAxis tick={AXIS} axisLine={false} tickLine={false} width={48} tickFormatter={(v) => usd(v)} />
           <Tooltip content={usdTip} />
-          <Area type="monotone" dataKey="spent" stroke="#3B82F6" strokeWidth={2} fill="url(#g-spend)" />
+          <Area type="monotone" dataKey="spent" stroke="#1f2328" strokeWidth={2} fill="url(#g-spend)" />
         </AreaChart>
       </ResponsiveContainer>
     </div>
@@ -100,12 +100,12 @@ export function SpendByModel({ data }: { data: SBM[] }) {
   const rows = data
     .slice(0, 6)
     .map((d) => ({ name: d.model.split("/").pop() ?? d.model, spent: microToUsd(d.spent_microusd) }));
-  return <HBar rows={rows} color="#3B82F6" />;
+  return <HBar rows={rows} color="#1f2328" />;
 }
 
 export function TopNodes({ data }: { data: SBN[] }) {
   const rows = data.slice(0, 6).map((d) => ({ name: d.node, spent: microToUsd(d.spent_microusd) }));
-  return <HBar rows={rows} color="#D97706" />;
+  return <HBar rows={rows} color="#6b7280" />;
 }
 
 export function CumulativeCost({ points }: { points: { name: number; spent: number }[] }) {
@@ -115,15 +115,15 @@ export function CumulativeCost({ points }: { points: { name: number; spent: numb
         <AreaChart data={points} margin={{ left: 4, right: 8, top: 8, bottom: 0 }}>
           <defs>
             <linearGradient id="g-cum" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.45} />
-              <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
+              <stop offset="0%" stopColor="#1f2328" stopOpacity={0.45} />
+              <stop offset="100%" stopColor="#1f2328" stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid stroke={GRID} vertical={false} />
-          <XAxis dataKey="name" tick={AXIS} axisLine={false} tickLine={false} label={{ value: "hop", position: "insideBottom", fill: "#8B949E", fontSize: 10, dy: 10 }} />
+          <XAxis dataKey="name" tick={AXIS} axisLine={false} tickLine={false} label={{ value: "hop", position: "insideBottom", fill: "#6b7280", fontSize: 10, dy: 10 }} />
           <YAxis tick={AXIS} axisLine={false} tickLine={false} width={48} tickFormatter={(v) => usd(v)} />
           <Tooltip content={usdTip} />
-          <Area type="monotone" dataKey="spent" stroke="#3B82F6" strokeWidth={2} fill="url(#g-cum)" />
+          <Area type="monotone" dataKey="spent" stroke="#1f2328" strokeWidth={2} fill="url(#g-cum)" />
         </AreaChart>
       </ResponsiveContainer>
     </div>
@@ -142,7 +142,7 @@ export function AvertedGauge({ pct, saved }: { pct: number; saved: string }) {
           startAngle={90}
           endAngle={-270}
         >
-          <RadialBar background={{ fill: "#232A36" }} dataKey="value" cornerRadius={8} fill="#2EA043" />
+          <RadialBar background={{ fill: "#e6e3da" }} dataKey="value" cornerRadius={8} fill="#1f2328" />
         </RadialBarChart>
       </ResponsiveContainer>
       <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">

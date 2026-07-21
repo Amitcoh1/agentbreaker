@@ -3,22 +3,16 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
   @apply bg-bg text-fg antialiased;
-  background-image: radial-gradient(
-    900px circle at 12% -10%,
-    rgba(59, 130, 246, 0.08),
-    transparent 45%
-  );
-  background-attachment: fixed;
 }
 
 @layer components {
   .card {
-    @apply rounded-xl border border-border bg-card/80 backdrop-blur-sm;
+    @apply rounded-xl border border-border bg-card shadow-soft;
   }
   .num {
     font-variant-numeric: tabular-nums;
@@ -29,7 +23,7 @@ body {
   }
 }
 
-/* tighten xyflow to the dark theme */
+/* keep the react-flow canvas on-brand */
 .react-flow__attribution {
   display: none;
 }

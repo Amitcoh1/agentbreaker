@@ -292,7 +292,8 @@ export default function ProductWindow() {
               </svg>
             </div>
             <aside className="side">
-              <h4>Budget tree</h4>
+              {/* fix #3: decorative mock label, not a document heading (avoids h1→h4 skip) */}
+              <div className="side-h4">Budget tree</div>
               <div className="tree">
                 <div className="trow root">
                   <span className="nm">research_pipeline</span>

@@ -1,12 +1,25 @@
+import Footer from "@/components/marketing/Footer";
+import Hero from "@/components/marketing/Hero";
+import Marquee from "@/components/marketing/Marquee";
+import Nav from "@/components/marketing/Nav";
+import ScrollProgress from "@/components/marketing/ScrollProgress";
+import FinalCta from "@/components/marketing/FinalCta";
+
 export default function MarketingPage() {
-  // Placeholder — components land in the next commit groups.
   return (
-    <main className="gridbg">
-      <div className="wrap">
-        <div className="hero">
-          <span className="eyebrow">Open source · circuit breaker for AI agents</span>
+    <>
+      <ScrollProgress />
+      <Nav />
+      <main className="gridbg">
+        <div className="wrap">
+          <Hero />
+          {/* ProductWindow (the stage) — added in a later group */}
         </div>
-      </div>
-    </main>
+        <Marquee />
+      </main>
+      {/* content sections — added in a later group */}
+      <FinalCta />
+      <Footer />
+    </>
   );
 }

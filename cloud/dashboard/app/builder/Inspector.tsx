@@ -21,6 +21,16 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 const numOrUndef = (v: string) => (v === "" ? undefined : Number(v));
 
+// What each node is for, and what its generated function body should do — so you know what to
+// write (or what to ask "Suggest code" for).
+const PURPOSE: Record<SpecNode["type"], string> = {
+  start: "Entry point. The workflow begins here — no body, no cost.",
+  model: "An LLM call. The body reads state, calls the model, and writes the reply back to state. This is where budget is spent — set a model, max_tokens, and a sub-budget.",
+  tool: "A tool/function call (search, DB, an API…). The body does the work and returns updated state. Tick side_effecting if it writes or sends anything, so a trip flags it.",
+  router: "A branch. The body inspects state and returns which labelled edge to take next (e.g. “retry” vs “done”).",
+  end: "Exit point. The workflow finishes here — no body, no cost.",
+};
+
 export default function Inspector({
   node,
   onChange,
@@ -57,6 +67,10 @@ export default function Inspector({
           )}
         </div>
       </div>
+
+      <p className="rounded-lg bg-ink/[0.04] px-3 py-2 text-[11px] leading-relaxed text-muted">
+        {PURPOSE[node.type]}
+      </p>
 
       <Field label="id (becomes the function name)">
         <input

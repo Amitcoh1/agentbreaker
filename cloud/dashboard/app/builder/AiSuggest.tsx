@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Check, Copy, Settings2, Sparkles } from "lucide-react";
 import type { SpecNode } from "@/lib/graphspec";
 import {
@@ -131,7 +132,13 @@ export default function AiSuggest({ node }: { node: SpecNode }) {
         <Sparkles className="h-3.5 w-3.5" /> {busy ? "Thinking…" : "Suggest code"}
       </button>
       {!settings.apiKey && !showSettings && (
-        <p className="text-[11px] text-muted">Add your API key in settings to enable.</p>
+        <p className="text-[11px] text-muted">
+          Add your API key here or in{" "}
+          <Link href="/settings" className="underline hover:text-fg">
+            Settings
+          </Link>{" "}
+          to enable.
+        </p>
       )}
       {err && <p className="text-[11px] text-brass">⚠ {err}</p>}
 

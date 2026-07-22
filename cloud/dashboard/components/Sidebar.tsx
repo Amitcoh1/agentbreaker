@@ -3,12 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Blocks, LayoutDashboard, ListChecks } from "lucide-react";
+import { Blocks, LayoutDashboard, ListChecks, Settings } from "lucide-react";
 
 const items = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/runs", label: "Runs", icon: ListChecks },
   { href: "/builder", label: "Builder", icon: Blocks },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export default function Sidebar() {

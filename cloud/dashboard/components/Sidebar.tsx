@@ -16,7 +16,7 @@ export default function Sidebar() {
   return (
     <aside className="hidden w-56 shrink-0 flex-col gap-1 border-r border-border bg-surface p-4 md:flex">
       <div className="mb-3 flex items-center gap-2 px-2 py-2">
-        <Image src="/mark-light.svg" alt="" width={24} height={24} />
+        <Image src="/mark-dark.svg" alt="" width={24} height={24} />
         <span className="text-[15px] font-semibold tracking-tight">breakerbox</span>
       </div>
       {items.map(({ href, label, icon: Icon }) => {

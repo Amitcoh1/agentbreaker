@@ -13,8 +13,8 @@ import {
 import { usd } from "@/lib/format";
 import type { DailySpend } from "@/lib/supabase";
 
-const AXIS = { stroke: "#6b7280", fontSize: 11 } as const;
-const GRID = "#e6e3da";
+const AXIS = { stroke: "#9aa1a9", fontSize: 11 } as const;
+const GRID = "#2a2f35"; // dark gridlines; data lines are cream (#cfc9ba) for contrast
 
 export function ChartCard({
   title,
@@ -61,15 +61,15 @@ export function SpendOverTime({ data }: { data: DailySpend[] }) {
         <AreaChart data={rows} margin={{ left: 4, right: 8, top: 8, bottom: 0 }}>
           <defs>
             <linearGradient id="g-spend" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#1f2328" stopOpacity={0.5} />
-              <stop offset="100%" stopColor="#1f2328" stopOpacity={0} />
+              <stop offset="0%" stopColor="#cfc9ba" stopOpacity={0.5} />
+              <stop offset="100%" stopColor="#cfc9ba" stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid stroke={GRID} vertical={false} />
           <XAxis dataKey="name" tick={AXIS} axisLine={false} tickLine={false} />
           <YAxis tick={AXIS} axisLine={false} tickLine={false} width={48} tickFormatter={(v) => usd(v)} />
           <Tooltip content={usdTip} />
-          <Area type="monotone" dataKey="spent" stroke="#1f2328" strokeWidth={2} fill="url(#g-spend)" />
+          <Area type="monotone" dataKey="spent" stroke="#cfc9ba" strokeWidth={2} fill="url(#g-spend)" />
         </AreaChart>
       </ResponsiveContainer>
     </div>
@@ -83,15 +83,15 @@ export function CumulativeCost({ points }: { points: { name: number; spent: numb
         <AreaChart data={points} margin={{ left: 4, right: 8, top: 8, bottom: 0 }}>
           <defs>
             <linearGradient id="g-cum" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#1f2328" stopOpacity={0.45} />
-              <stop offset="100%" stopColor="#1f2328" stopOpacity={0} />
+              <stop offset="0%" stopColor="#cfc9ba" stopOpacity={0.45} />
+              <stop offset="100%" stopColor="#cfc9ba" stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid stroke={GRID} vertical={false} />
-          <XAxis dataKey="name" tick={AXIS} axisLine={false} tickLine={false} label={{ value: "hop", position: "insideBottom", fill: "#6b7280", fontSize: 10, dy: 10 }} />
+          <XAxis dataKey="name" tick={AXIS} axisLine={false} tickLine={false} label={{ value: "hop", position: "insideBottom", fill: "#9aa1a9", fontSize: 10, dy: 10 }} />
           <YAxis tick={AXIS} axisLine={false} tickLine={false} width={48} tickFormatter={(v) => usd(v)} />
           <Tooltip content={usdTip} />
-          <Area type="monotone" dataKey="spent" stroke="#1f2328" strokeWidth={2} fill="url(#g-cum)" />
+          <Area type="monotone" dataKey="spent" stroke="#cfc9ba" strokeWidth={2} fill="url(#g-cum)" />
         </AreaChart>
       </ResponsiveContainer>
     </div>

@@ -92,7 +92,7 @@ export default function Tour({ steps, storageKey }: { steps: TourStep[]; storage
                 Back
               </button>
             )}
-            <button onClick={next} className="rounded-lg bg-ink px-2.5 py-1 text-xs font-medium text-paper">
+            <button onClick={next} className="rounded-lg bg-fg px-2.5 py-1 text-xs font-medium text-bg">
               {i + 1 < steps.length ? "Next" : "Done"}
             </button>
           </div>

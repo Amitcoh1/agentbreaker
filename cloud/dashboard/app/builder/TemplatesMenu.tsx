@@ -156,7 +156,7 @@ export default function TemplatesMenu({
                   placeholder="Template name"
                   className="min-w-0 flex-1 rounded border border-border bg-surface px-2 py-1 text-sm outline-none focus:border-ink"
                 />
-                <button onClick={save} className="rounded bg-ink px-2.5 py-1 text-sm font-medium text-paper">
+                <button onClick={save} className="rounded bg-fg px-2.5 py-1 text-sm font-medium text-bg">
                   Save
                 </button>
               </div>

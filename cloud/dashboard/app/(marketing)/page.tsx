@@ -1,9 +1,16 @@
+import Compare from "@/components/marketing/Compare";
+import FinalCta from "@/components/marketing/FinalCta";
 import Footer from "@/components/marketing/Footer";
 import Hero from "@/components/marketing/Hero";
+import HowItWorks from "@/components/marketing/HowItWorks";
+import Integration from "@/components/marketing/Integration";
+import Manifesto from "@/components/marketing/Manifesto";
 import Marquee from "@/components/marketing/Marquee";
 import Nav from "@/components/marketing/Nav";
+import Pillars from "@/components/marketing/Pillars";
+import Quote from "@/components/marketing/Quote";
 import ScrollProgress from "@/components/marketing/ScrollProgress";
-import FinalCta from "@/components/marketing/FinalCta";
+import Stats from "@/components/marketing/Stats";
 
 export default function MarketingPage() {
   return (
@@ -13,11 +20,17 @@ export default function MarketingPage() {
       <main className="gridbg">
         <div className="wrap">
           <Hero />
-          {/* ProductWindow (the stage) — added in a later group */}
+          {/* ProductWindow (the stage) — added in the next group */}
         </div>
         <Marquee />
       </main>
-      {/* content sections — added in a later group */}
+      <HowItWorks />
+      <Pillars />
+      <Integration />
+      <Compare />
+      <Manifesto />
+      <Stats />
+      <Quote />
       <FinalCta />
       <Footer />
     </>

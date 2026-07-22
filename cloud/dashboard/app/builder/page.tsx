@@ -91,7 +91,7 @@ export default function BuilderPage() {
 
   const onConnect = useCallback(
     (c: Connection) =>
-      setEdges((eds) => addEdge({ ...c, animated: true, style: { stroke: "#1f2328" } }, eds)),
+      setEdges((eds) => addEdge({ ...c, animated: true, style: { stroke: "#9aa1a9" } }, eds)),
     [setEdges],
   );
 
@@ -277,12 +277,13 @@ export default function BuilderPage() {
                 setSelEdge(null);
               }}
               deleteKeyCode={["Backspace", "Delete"]}
+              colorMode="dark"
               fitView
               proOptions={{ hideAttribution: true }}
             >
-              <Background color="#e6e3da" gap={20} />
+              <Background color="#2a2f35" gap={20} />
               <Controls showInteractive={false} />
-              <MiniMap pannable className="!bg-surface" nodeColor={() => "#1f2328"} />
+              <MiniMap pannable className="!bg-surface" nodeColor={() => "#9aa1a9"} />
             </ReactFlow>
           </NodeIssues.Provider>
         </div>

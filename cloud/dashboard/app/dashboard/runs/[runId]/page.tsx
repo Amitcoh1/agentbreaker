@@ -17,7 +17,7 @@ export default async function RunPage({ params }: { params: Promise<{ runId: str
       <div className="p-8">
         <p className="text-muted">
           Run not found (or not public).{" "}
-          <Link href="/runs" className="text-primary hover:underline">
+          <Link href="/dashboard/runs" className="text-primary hover:underline">
             ← all runs
           </Link>
         </p>

@@ -134,7 +134,7 @@ export default function AiSuggest({ node }: { node: SpecNode }) {
       {!settings.apiKey && !showSettings && (
         <p className="text-[11px] text-muted">
           Add your API key here or in{" "}
-          <Link href="/settings" className="underline hover:text-fg">
+          <Link href="/dashboard/settings" className="underline hover:text-fg">
             Settings
           </Link>{" "}
           to enable.

@@ -49,7 +49,7 @@ export function RunsTable({ runs }: { runs: Run[] }) {
               className="border-b border-border/60 last:border-0 hover:bg-ink/[0.03]"
             >
               <td className="px-4 py-3">
-                <Link href={`/runs/${r.run_id}`} className="num text-primary hover:underline">
+                <Link href={`/dashboard/runs/${r.run_id}`} className="num text-primary hover:underline">
                   {shortId(r.run_id)}
                 </Link>
               </td>

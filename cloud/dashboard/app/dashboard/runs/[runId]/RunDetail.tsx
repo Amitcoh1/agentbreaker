@@ -72,7 +72,7 @@ export default function RunDetail({
   return (
     <div className="space-y-6 p-6 lg:p-8">
       <div className="flex items-center justify-between">
-        <Link href="/runs" className="inline-flex items-center gap-2 text-sm text-muted hover:text-fg">
+        <Link href="/dashboard/runs" className="inline-flex items-center gap-2 text-sm text-muted hover:text-fg">
           <ArrowLeft className="h-4 w-4" /> Runs
         </Link>
         {live && (

@@ -6,10 +6,10 @@ import { usePathname } from "next/navigation";
 import { Blocks, LayoutDashboard, ListChecks, Settings } from "lucide-react";
 
 const items = [
-  { href: "/", label: "Overview", icon: LayoutDashboard },
-  { href: "/runs", label: "Runs", icon: ListChecks },
-  { href: "/builder", label: "Builder", icon: Blocks },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+  { href: "/dashboard/runs", label: "Runs", icon: ListChecks },
+  { href: "/dashboard/builder", label: "Builder", icon: Blocks },
+  { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
 export default function Sidebar() {
@@ -21,7 +21,7 @@ export default function Sidebar() {
         <span className="text-[15px] font-semibold tracking-tight">breakerbox</span>
       </div>
       {items.map(({ href, label, icon: Icon }) => {
-        const active = href === "/" ? path === "/" : path.startsWith(href);
+        const active = href === "/dashboard" ? path === "/dashboard" : path.startsWith(href);
         return (
           <Link
             key={href}

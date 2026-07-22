@@ -8,6 +8,7 @@ import Manifesto from "@/components/marketing/Manifesto";
 import Marquee from "@/components/marketing/Marquee";
 import Nav from "@/components/marketing/Nav";
 import Pillars from "@/components/marketing/Pillars";
+import ProductWindow from "@/components/marketing/ProductWindow";
 import Quote from "@/components/marketing/Quote";
 import ScrollProgress from "@/components/marketing/ScrollProgress";
 import Stats from "@/components/marketing/Stats";
@@ -20,7 +21,7 @@ export default function MarketingPage() {
       <main className="gridbg">
         <div className="wrap">
           <Hero />
-          {/* ProductWindow (the stage) — added in the next group */}
+          <ProductWindow />
         </div>
         <Marquee />
       </main>

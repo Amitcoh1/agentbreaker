@@ -14,7 +14,7 @@
   --line2: #303841;
   --tx: #f2f0e9;
   --tx2: #98a1ad;
-  --tx3: #5f6873;
+  --tx3: #7b8491; /* was #5f6873; lightened to clear WCAG AA 4.5:1 on --bg (fix #3) */
   --brass: #d4a017;
   --brass-dim: rgba(212, 160, 23, 0.14);
   --disp: var(--font-display), "Space Grotesk", sans-serif;
@@ -235,7 +235,7 @@ body:has(.mkt) { background: #0f1114; }
 .mkt .canvas svg { display: block; width: 100%; height: auto; }
 .mkt .canvas text { font-family: var(--mono); }
 .mkt .side { border-left: 1px solid var(--line); background: var(--panel); padding: 18px; text-align: left; }
-.mkt .side h4 {
+.mkt .side .side-h4 {
   font-family: var(--mono);
   font-size: 11.5px;
   letter-spacing: 1.2px;
@@ -297,6 +297,7 @@ body:has(.mkt) { background: #0f1114; }
   overflow-x: auto;
   text-align: left;
   min-height: 400px;
+  white-space: pre; /* fix #1: design omitted this, so the code tab rendered collapsed */
 }
 .mkt .codepane .c { color: var(--tx3); }
 .mkt .codepane .k { color: var(--brass); }
@@ -507,7 +508,7 @@ body:has(.mkt) { background: #0f1114; }
 .mkt .ctafinal { text-align: center; padding: 120px 0 110px; }
 .mkt footer { border-top: 1px solid var(--line); padding: 44px 0; }
 .mkt .fgrid { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 32px; }
-.mkt .fcol h5 {
+.mkt .fcol h3 {
   font-family: var(--mono);
   font-size: 11.5px;
   letter-spacing: 1.2px;
@@ -533,6 +534,8 @@ body:has(.mkt) { background: #0f1114; }
 }
 
 @media (max-width: 920px) {
+  /* fix #2: the design's h1 (clamp min 42px) had no mobile size and overflowed ≤~390px */
+  .mkt h1 { font-size: clamp(30px, 8.2vw, 44px); letter-spacing: -1.5px; }
   .mkt .stagebody { grid-template-columns: 1fr; }
   .mkt .side { border-left: none; border-top: 1px solid var(--line); }
   .mkt .pillars, .mkt .split, .mkt .never, .mkt .flow3 { grid-template-columns: 1fr; }

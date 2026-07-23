@@ -754,6 +754,7 @@ body:has(.mkt) { background: #0f1114; }
   .mkt .stat:nth-child(2) { border-right: none; }
   .mkt .mani { padding: 36px 26px; }
   .mkt .navlinks > a:not(.ghpill) { display: none; }
+  .mkt .reel-cta { display: none; }
   .mkt section { padding: 72px 0; }
   .mkt .cmpr { grid-template-columns: 1.2fr 1fr 1fr; font-size: 12.5px; }
   .mkt .cmpr > div:nth-child(3) { display: none; }

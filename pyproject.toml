@@ -35,6 +35,11 @@ Homepage = "https://github.com/Amitcoh1/agentbreaker"
 [tool.hatch.build.targets.wheel]
 packages = ["src/breakerbox"]
 
+# Without this, the sdist defaults to the whole repo — it swept in cloud/**/node_modules
+# + .next caches (235 MB, over PyPI's 100 MB limit). Scope it to actual source.
+[tool.hatch.build.targets.sdist]
+only-include = ["src/breakerbox", "tests", "README.md", "LICENSE", "pyproject.toml"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"

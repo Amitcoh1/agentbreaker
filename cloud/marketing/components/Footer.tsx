@@ -55,7 +55,9 @@ export default function Footer() {
           ))}
         </div>
         <div className="fbot">
-          <span>© 2026 Breakerbox · MIT license</span>
+          <span>
+            © 2026 Breakerbox · MIT license · <a href={LINKS.privacy}>Privacy</a>
+          </span>
           <span>no server · no stored keys · no run button</span>
         </div>
       </footer>

@@ -11,7 +11,8 @@ export const LINKS = {
   twitter: "https://github.com/Amitcoh1/agentbreaker",
   linkedin: "https://github.com/Amitcoh1/agentbreaker",
   docs: "/docs",
-  builder: "/dashboard/builder",
+  // The app is a separate deploy now; point cross-domain to it (falls back to a relative path).
+  builder: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/dashboard/builder`,
 } as const;
 
 export const PIP = "pip install agentbreaker";

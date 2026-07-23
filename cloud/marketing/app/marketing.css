@@ -29,6 +29,11 @@
   -webkit-font-smoothing: antialiased;
   min-height: 100dvh;
 }
+/* Minimal reset — this standalone app has no Tailwind preflight to provide it. */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+body { margin: 0; }
 html { scroll-behavior: smooth; }
 body:has(.mkt) { background: #0f1114; }
 .mkt a { color: inherit; }

@@ -53,11 +53,19 @@ export const displayStatus = (r: Pick<Run, "status">): Exclude<RunStatus, null> 
 
 export const isActive = (r: Pick<Run, "status">) => displayStatus(r) === "running";
 
-// POST a pause/kill command to the control edge function (needs the control key).
-export async function sendCommand(runId: string, command: "pause" | "kill", key: string) {
+// POST a pause/kill command to the control edge function. Authenticated owners are authorized by
+// their Supabase session token; a control key is an optional fallback (legacy/operator).
+export async function sendCommand(
+  runId: string,
+  command: "pause" | "kill",
+  opts: { key?: string; token?: string } = {},
+) {
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  if (opts.token) headers.authorization = `Bearer ${opts.token}`;
+  if (opts.key) headers["x-control-key"] = opts.key;
   const res = await fetch(controlUrl, {
     method: "POST",
-    headers: { "content-type": "application/json", "x-control-key": key },
+    headers,
     body: JSON.stringify({ run_id: runId, command }),
   });
   if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error ?? `HTTP ${res.status}`);

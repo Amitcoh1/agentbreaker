@@ -29,6 +29,11 @@
   -webkit-font-smoothing: antialiased;
   min-height: 100dvh;
 }
+/* Minimal reset — this standalone app has no Tailwind preflight to provide it. */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+body { margin: 0; }
 html { scroll-behavior: smooth; }
 body:has(.mkt) { background: #0f1114; }
 .mkt a { color: inherit; }
@@ -99,6 +104,64 @@ body:has(.mkt) { background: #0f1114; }
 }
 .mkt .ghpill:hover { border-color: var(--tx3); }
 .mkt .ghpill::after { content: none; }
+.mkt .ghpill .ghcount {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  padding-left: 8px;
+  border-left: 1px solid var(--line2);
+}
+
+/* Resources dropdown — trigger matches nav-link styling; menu is a neutral panel (no brass). */
+.mkt .navdrop { position: relative; display: flex; align-items: center; }
+.mkt .navdrop-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14.5px;
+  color: var(--tx2);
+  padding: 4px 0;
+}
+.mkt .navdrop-trigger:hover,
+.mkt .navdrop-trigger.on { color: var(--tx); }
+.mkt .navdrop-caret { transition: transform 0.15s ease; }
+.mkt .navdrop-trigger.on .navdrop-caret { transform: rotate(180deg); }
+.mkt .navdrop-menu {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line2);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  z-index: 60;
+}
+.mkt .navdrop-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  text-decoration: none;
+}
+.mkt .navdrop-item:hover { background: var(--bg2); }
+.mkt .navdrop-item-label { color: var(--tx); font-size: 14px; font-weight: 500; }
+.mkt .navdrop-item-desc { color: var(--tx2); font-size: 12.5px; }
+@media (max-width: 920px) {
+  .mkt .navdrop { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mkt .navdrop-caret { transition: none; }
+}
 
 .mkt .hero { text-align: center; padding: 84px 0 30px; position: relative; }
 .mkt .eyebrow {

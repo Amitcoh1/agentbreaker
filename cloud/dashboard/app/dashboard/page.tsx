@@ -5,12 +5,12 @@ import { StatCard, StatGrid } from "@/components/StatCard";
 import { microToUsd, usd } from "@/lib/format";
 import {
   isActive,
-  supabase,
   type DailySpend,
   type Run,
   type SpendByModel as SBM,
   type SpendByNode as SBN,
 } from "@/lib/supabase";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -41,9 +41,17 @@ function DriverList({ rows }: { rows: { name: string; value: number; meta?: stri
 }
 
 export default async function Overview() {
-  const db = supabase();
+  const db = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await db.auth.getUser();
   const [{ data: runs }, { data: byModel }, { data: daily }, { data: byNode }] = await Promise.all([
-    db.from("runs").select("*").order("updated_at", { ascending: false }).limit(50),
+    db
+      .from("runs")
+      .select("*")
+      .eq("owner_id", user?.id ?? "")
+      .order("updated_at", { ascending: false })
+      .limit(50),
     db.from("v_spend_by_model").select("*"),
     db.from("v_daily_spend").select("*"),
     db.from("v_spend_by_node").select("*"),

@@ -1,0 +1,33 @@
+---
+title: Introduction
+description: Breakerbox is the circuit breaker for AI agents — a hard dollar budget on the workflow itself.
+---
+
+## What is Breakerbox?
+
+Breakerbox puts a **hard dollar budget on an agent workflow itself** — hierarchical across
+sub-agents, enforced _between_ steps, and never a mid-flight failure. The Python package is
+[`agentbreaker`](https://pypi.org/project/agentbreaker/).
+
+> Dashboards are autopsies. A budget that trips _between steps_ is a seatbelt.
+
+Most cost tooling tells you what an agent spent _after_ it spent it. Breakerbox stops the run at a
+hop boundary the moment it would exceed the budget you set — so your agents can't outspend you.
+
+## The two pieces
+
+- **A library.** `guard()` wraps a compiled LangGraph app and enforces a hierarchical dollar budget
+  (reserve → execute → reconcile, like a credit-card hold). It self-meters tokens, trips gracefully
+  at hop boundaries, and emits a [receipt](/docs/receipts).
+- **A visual builder.** A canvas that generates **readable, guarded Python you run yourself** —
+  [codegen only](/docs/builder), never server execution.
+
+## What Breakerbox will never do
+
+These are permanent architectural constraints, not a phase — see the [security model](/docs/security):
+
+- Never server-execute your graphs.
+- Never store or transmit your provider API keys.
+- Codegen is one-directional: spec → Python string → download.
+
+Ready? Head to the **[Quickstart](/docs/quickstart)**.

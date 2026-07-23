@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Download, KeyRound, Pause, Square } from "lucide-react";
 import { controlUrl, isActive, sendCommand, type Run, type RunEvent } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function RunControls({ run, events }: { run: Run; events: RunEvent[] }) {
   const [key, setKey] = useState("");
@@ -22,7 +23,11 @@ export default function RunControls({ run, events }: { run: Run; events: RunEven
     setBusy(cmd);
     setMsg(null);
     try {
-      await sendCommand(run.run_id, cmd, key);
+      const supabase = createSupabaseBrowserClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      await sendCommand(run.run_id, cmd, { key, token: session?.access_token });
       setMsg({ ok: true, text: `${cmd} sent — applies at the next hop boundary` });
     } catch (e) {
       setMsg({ ok: false, text: e instanceof Error ? e.message : "failed" });
@@ -42,7 +47,7 @@ export default function RunControls({ run, events }: { run: Run; events: RunEven
   };
 
   const active = isActive(run);
-  const canControl = active && !!key && !!controlUrl && !busy;
+  const canControl = active && !!controlUrl && !busy;
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -65,8 +70,11 @@ export default function RunControls({ run, events }: { run: Run; events: RunEven
             running.
           </p>
         )}
-        {controlUrl && active && !key && (
-          <p className="mb-3 text-xs text-muted">Enter your control key below to enable commands.</p>
+        {controlUrl && active && (
+          <p className="mb-3 text-xs text-muted">
+            Pause or kill your own runs directly — a control key is only needed for a run you
+            don&apos;t own.
+          </p>
         )}
         <div className="flex gap-2">
           <button
@@ -93,7 +101,8 @@ export default function RunControls({ run, events }: { run: Run; events: RunEven
             <KeyRound className="h-4 w-4 text-muted" /> Control key
           </div>
           <p className="mb-3 text-xs text-muted">
-            Required to issue commands. Stored only in this browser (localStorage).
+            Optional — only needed to control a run you don&apos;t own. Stored only in this browser
+            (localStorage).
           </p>
           <input
             type="password"

@@ -1,0 +1,55 @@
+---
+title: Quickstart
+description: Install agentbreaker and wrap your LangGraph app with a dollar budget in a few lines.
+---
+
+## Install
+
+```bash
+pip install agentbreaker
+```
+
+## Guard a workflow
+
+`guard()` wraps your compiled LangGraph app and enforces a dollar budget across the whole run,
+including any sub-agents.
+
+```python
+from agentbreaker import guard
+
+# my_app is your compiled LangGraph app
+app = guard(my_app, budget_usd=5.00)
+
+result = app.invoke({"messages": [...]})
+```
+
+That's it — the workflow now can't spend more than $5.00. Breakerbox meters tokens itself
+(tiktoken, then reconciles against the provider's reported usage) so the number is honest.
+
+## How the budget works
+
+Each hop **reserves** its estimated cost against the remaining budget, **executes**, then
+**reconciles** the escrow against actual usage — the same shape as a credit-card hold. Sub-agents
+draw from the parent's remaining budget, so the cap is hierarchical, never per-call.
+
+## When the budget trips
+
+Breakerbox trips **at hop boundaries**, never mid-call, so no request is interrupted:
+
+- **pause** — checkpoints the run so you can resume it later with more budget.
+- **kill** — stops the run and finalizes the receipt, listing any side-effecting tools that fired.
+
+## Private runs (optional cloud dashboard)
+
+To see runs in the dashboard, create a key under **Settings → Your ingest key** and set it where
+your agents run:
+
+```bash
+export AGENTBREAKER_INGEST_KEY="abk_…"   # runs become private to your account
+```
+
+## Next
+
+- [The visual builder](/docs/builder)
+- [Receipts](/docs/receipts)
+- [Security model](/docs/security)

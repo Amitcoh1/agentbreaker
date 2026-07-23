@@ -10,7 +10,8 @@ export const LINKS = {
   issues: "https://github.com/Amitcoh1/agentbreaker/issues",
   twitter: "https://github.com/Amitcoh1/agentbreaker",
   linkedin: "https://github.com/Amitcoh1/agentbreaker",
-  docs: "/docs",
+  // Docs is its own deploy (cloud/docs); falls back to the local stub if the URL isn't set.
+  docs: process.env.NEXT_PUBLIC_DOCS_URL ?? "/docs",
   // The app is a separate deploy now; point cross-domain to it (falls back to a relative path).
   builder: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/dashboard/builder`,
 } as const;

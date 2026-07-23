@@ -1,0 +1,26 @@
+---
+title: Receipts
+description: Every guarded run emits a receipt — a terminal summary, a single-file HTML report, and JSON.
+---
+
+## Three formats
+
+Every guarded run produces a **receipt** in three shapes:
+
+- **Terminal** — a concise summary printed at the end of the run.
+- **HTML** — a single, self-contained file you can open, save, or share.
+- **JSON** — machine-readable, for CI gates and dashboards.
+
+## What's in a receipt
+
+- **Budget** vs **spent** — what the run was allowed, and what it used.
+- **Waste averted** — the projected uncapped spend minus the actual spend (what the budget saved).
+- **Hops** — each step, its model, tokens in/out, and cost.
+- **Trip reason** — if the run paused or was killed, why.
+- **Side effects** — any side-effecting tools that fired before the run stopped.
+
+## Honesty
+
+Token counts are self-metered (tiktoken) and then reconciled against the provider's reported
+usage, so the receipt reflects what actually happened — not an estimate. Prompts and keys are never
+part of the event stream.

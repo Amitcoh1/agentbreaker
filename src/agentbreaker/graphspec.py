@@ -24,9 +24,9 @@ NODE_TYPES = {"start", "end", "model", "tool", "router"}
 _NODE_FIELDS: dict[str, set[str]] = {
     "start": set(),
     "end": set(),
-    "model": {"model", "max_tokens", "sub_budget_usd"},
-    "tool": {"name", "side_effecting"},
-    "router": {"condition"},
+    "model": {"model", "max_tokens", "sub_budget_usd", "code"},
+    "tool": {"name", "side_effecting", "code"},
+    "router": {"condition", "code"},
 }
 _CONFIG_FIELDS = {"budget_usd", "max_hops", "ttl_seconds", "velocity_usd_per_min", "on_trip"}
 _EDGE_FIELDS = {"source", "target", "condition"}

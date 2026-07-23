@@ -1,4 +1,5 @@
 import CopyPip from "./CopyPip";
+import WatchReel from "./WatchReel";
 import { LINKS } from "./links";
 
 export default function Hero() {
@@ -22,6 +23,7 @@ export default function Hero() {
           View on GitHub
         </a>
       </div>
+      <WatchReel />
       <p className="trust">
         <b>MIT</b> · Python 3.11+ · in-process · <b>no server, no stored keys</b>
       </p>

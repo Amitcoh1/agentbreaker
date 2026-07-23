@@ -1,0 +1,20 @@
+{
+  "version": "1",
+  "config": {
+    "budget_usd": 3.0,
+    "on_trip": "kill"
+  },
+  "nodes": [
+    {"id": "start", "type": "start"},
+    {"id": "planner", "type": "model", "model": "openai/gpt-4o", "max_tokens": 512, "code": "resp = call_model(state[\"messages\"])\n\nstate[\"messages\"].append(resp)\nreturn state"},
+    {"id": "fetch", "type": "tool", "name": "web_search", "side_effecting": false, "code": "state[\"docs\"] = web_search(state[\"query\"])\nreturn state"},
+    {"id": "summarize", "type": "model", "model": "anthropic/claude-sonnet-4-6"},
+    {"id": "end", "type": "end"}
+  ],
+  "edges": [
+    {"source": "start", "target": "planner"},
+    {"source": "planner", "target": "fetch"},
+    {"source": "fetch", "target": "summarize"},
+    {"source": "summarize", "target": "end"}
+  ]
+}

@@ -18,9 +18,19 @@ export default function WatchReel() {
     };
   }, [open]);
 
+  // iOS Safari won't play the reel's audio inside an iframe (the play gesture must be on the
+  // top-level page), so on touch devices open it full-page in a new tab; desktop keeps the lightbox.
+  const openReel = () => {
+    if (window.matchMedia("(pointer: coarse)").matches) {
+      window.open("/reel/reel.html", "_blank", "noopener,noreferrer");
+    } else {
+      setOpen(true);
+    }
+  };
+
   return (
     <>
-      <button type="button" className="reel-cta" onClick={() => setOpen(true)}>
+      <button type="button" className="reel-cta" onClick={openReel}>
         <span className="reel-cta-play" aria-hidden="true">▶</span> Watch the reel
       </button>
       {open && (

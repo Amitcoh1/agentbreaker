@@ -45,13 +45,17 @@ create policy "events readable to owner or public"
     where r.run_id = events.run_id and (r.public or r.owner_id = auth.uid())
   ));
 
--- 4. Saved graphs become owner-scoped (the table was prepared in 0004). Wiring the builder's
---    save/load to this table is a follow-up; these policies make per-user storage possible now.
-drop policy if exists "owner reads graphs"  on public.graphs;
-drop policy if exists "owner writes graphs" on public.graphs;
-create policy "owner reads graphs"
-  on public.graphs for select using (owner_id = auth.uid());
-create policy "owner writes graphs"
-  on public.graphs for all using (owner_id = auth.uid()) with check (owner_id = auth.uid());
+-- 4. Saved graphs become owner-scoped IF the graphs table exists (migration 0004). Guarded so this
+--    migration applies cleanly even on projects that never ran 0004 (the builder saves to
+--    localStorage today; wiring save/load to this table is a follow-up).
+do $$
+begin
+  if to_regclass('public.graphs') is not null then
+    drop policy if exists "owner reads graphs"  on public.graphs;
+    drop policy if exists "owner writes graphs" on public.graphs;
+    create policy "owner reads graphs"  on public.graphs for select using (owner_id = auth.uid());
+    create policy "owner writes graphs" on public.graphs for all using (owner_id = auth.uid()) with check (owner_id = auth.uid());
+  end if;
+end $$;
 
 -- Note: user builder templates are localStorage-only (per browser) — no table, nothing to scope.

@@ -91,7 +91,7 @@ export default function BuilderPage() {
 
   const onConnect = useCallback(
     (c: Connection) =>
-      setEdges((eds) => addEdge({ ...c, animated: true, style: { stroke: "#9aa1a9" } }, eds)),
+      setEdges((eds) => addEdge({ ...c, animated: true, style: { stroke: "#98a1ad" } }, eds)),
     [setEdges],
   );
 
@@ -281,9 +281,9 @@ export default function BuilderPage() {
               fitView
               proOptions={{ hideAttribution: true }}
             >
-              <Background color="#2a2f35" gap={20} />
+              <Background color="#303841" gap={20} />
               <Controls showInteractive={false} />
-              <MiniMap pannable className="!bg-surface" nodeColor={() => "#9aa1a9"} />
+              <MiniMap pannable className="!bg-surface" nodeColor={() => "#98a1ad"} />
             </ReactFlow>
           </NodeIssues.Provider>
         </div>

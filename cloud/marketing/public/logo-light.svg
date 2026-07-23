@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="96" viewBox="0 0 360 96">
+  <rect x="14" y="12" width="50" height="72" rx="9" fill="none" stroke="#1f2328" stroke-width="3"/>
+  <rect x="24" y="23" width="30" height="12" rx="3" fill="#1f2328"/>
+  <rect x="24" y="42" width="30" height="12" rx="3" fill="#1f2328"/>
+  <rect x="24" y="62" width="30" height="12" rx="3" fill="#b8860b" transform="rotate(-15 39 68)"/>
+  <text x="82" y="57" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="34" font-weight="600" letter-spacing="-0.5" fill="#1f2328">breakerbox</text>
+  <text x="83" y="80" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="13" font-weight="400" fill="#6b7280">your agents can't outspend you</text>
+</svg>

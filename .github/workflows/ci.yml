@@ -36,3 +36,35 @@ jobs:
       - run: npm run lint
       - run: npm test # vitest: TS↔Python codegen/validator golden parity
       - run: npm run build
+
+  marketing:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cloud/marketing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: cloud/marketing/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run build
+
+  docs:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cloud/docs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: cloud/docs/package-lock.json
+      - run: npm ci
+      - run: npm run build # fumadocs-mdx generates .source, then next build type-checks

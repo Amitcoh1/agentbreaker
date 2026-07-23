@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { RunsTable } from "@/components/RunsTable";
-import { displayStatus, supabase, type Run } from "@/lib/supabase";
+import { displayStatus, type Run } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 const FILTERS = ["all", "running", "completed", "killed", "paused"] as const;
 
@@ -13,7 +14,7 @@ export default function RunsExplorer({ initial }: { initial: Run[] }) {
   const [status, setStatus] = useState<(typeof FILTERS)[number]>("all");
 
   useEffect(() => {
-    const db = supabase();
+    const db = createSupabaseBrowserClient();
     const channel = db
       .channel("runs-list")
       .on("postgres_changes", { event: "*", schema: "public", table: "runs" }, (payload) => {

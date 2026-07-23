@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { KeyRound, Sparkles } from "lucide-react";
 import { type AiSettings, loadAiSettings, providerNote, saveAiSettings } from "@/lib/aiSuggest";
+import IngestKeys from "@/components/IngestKeys";
 
 const INPUT =
   "mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-ink";
@@ -42,12 +43,14 @@ export default function SettingsPage() {
         <div>
           <h1 className="text-lg font-semibold">Settings</h1>
           <p className="text-sm text-muted">
-            Everything here is stored only in this browser. Keys are sent only to the provider you
-            pick — never to a Breakerbox server.
+            Your provider and control keys are stored only in this browser and never sent to a
+            Breakerbox server. Ingest keys are account-scoped — we store only a hash.
           </p>
         </div>
         {saved && <span className="chip bg-ink/[0.08] text-fg">saved</span>}
       </header>
+
+      <IngestKeys />
 
       <section className="card space-y-3 p-5">
         <div className="flex items-center gap-2 text-sm font-semibold">

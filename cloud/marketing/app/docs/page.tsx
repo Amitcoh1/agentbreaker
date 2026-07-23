@@ -1,4 +1,4 @@
-import { LINKS } from "@/components/marketing/links";
+import { LINKS } from "@/components/links";
 
 export const metadata = {
   title: "Docs · Breakerbox",

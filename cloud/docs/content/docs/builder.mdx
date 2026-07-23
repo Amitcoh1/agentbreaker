@@ -1,0 +1,32 @@
+---
+title: Visual builder
+description: Design an agent workflow on a canvas, then export readable guarded Python you run yourself.
+---
+
+## Codegen, not execution
+
+The builder is a canvas that **generates readable, guarded Python**. It never runs your graph and
+never touches your keys — you download the code and run it yourself, wherever you like.
+
+This is the whole security posture: there is no server that executes flows, so there is nothing to
+hack into. See the [security model](/docs/security).
+
+## The Budget Tree
+
+You allocate your dollar budget across the graph directly on the canvas. The Budget Tree shows how
+the total splits across nodes and sub-agents. If the allocations sum to more than the total,
+**export is blocked** until it balances — the budget is part of the design, not an afterthought.
+
+## Export
+
+When you export, the canvas compiles the spec (plain JSON) to a Python **string** and hands it to
+you as a download or copy. The generated code is plain and readable — the same `guard()` calls you
+would write by hand:
+
+```python
+from agentbreaker import guard
+
+app = guard(my_app, budget_usd=5.00)
+```
+
+Nothing is evaluated, imported, or templated on a server. Spec in, Python string out.

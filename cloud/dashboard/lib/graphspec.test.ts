@@ -9,7 +9,7 @@ const readSpec = (n: string) => JSON.parse(readFileSync(`${FX}${n}.json`, "utf8"
 const readText = (f: string) => readFileSync(`${FX}${f}`, "utf8");
 
 describe("TS mirror stays byte-identical to the Python golden fixtures", () => {
-  it.each(["linear", "router_cycle"])("codegen(%s) matches the golden .py", (name) => {
+  it.each(["linear", "router_cycle", "with_code"])("codegen(%s) matches the golden .py", (name) => {
     expect(generate(readSpec(name))).toBe(readText(`${name}.py`));
   });
 

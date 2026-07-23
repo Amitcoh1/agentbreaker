@@ -5,6 +5,7 @@ const ROWS: { label: string; cells: [string, string][] }[] = [
   { label: "Per-key / org dollar budgets", cells: [["✓", "y"], ["—", "n"], ["— use your gateway", "n"]] },
   { label: "Hierarchical per-agent escrow", cells: [["flat session", "n"], ["—", "n"], ["✓", "yb"]] },
   { label: "Stop at hop boundary, resume from checkpoint", cells: [["429 mid-flight", "n"], ["—", "n"], ["✓", "yb"]] },
+  { label: "Catches a runaway run under the org ceiling", cells: [["never fires", "n"], ["—", "n"], ["✓", "yb"]] },
   { label: "Visual builder output", cells: [["n/a", "n"], ["hosted flows", "n"], ["plain Python", "yb"]] },
   { label: "Executes your code server-side", cells: [["n/a", "n"], ["yes", "y"], ["never", "yb"]] },
   { label: "Stores your provider keys", cells: [["yes (proxy)", "y"], ["yes", "y"], ["never", "yb"]] },
@@ -43,6 +44,18 @@ export default function Compare() {
               ))}
             </div>
           ))}
+        </Reveal>
+        <Reveal className="cmp-catch">
+          <div className="cmp-catch-k">The catch most gateway users miss</div>
+          <p>
+            A key limit has to sit high enough not to block real work — so a single runaway run can
+            burn <b>$180 while still under a $500 ceiling</b>. The key never fires until the damage
+            is already account-wide, and then it 429s <i>everyone</i>. Breakerbox trips that one run
+            at <b>$2</b>, at a hop boundary, before the org ceiling ever notices.
+          </p>
+          <p className="cmp-catch-line">
+            A key limit is the fuse box for the building. Breakerbox is the breaker on this circuit.
+          </p>
         </Reveal>
         <p className="cmpnote">
           Facts as of launch — see the README comparison for sources and specifics.

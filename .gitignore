@@ -14,6 +14,7 @@ examples/runaway_demo/reports/
 *.html
 !src/agentbreaker/report/*.html.j2
 !examples/runaway_demo/sample_receipt.html
+!cloud/marketing/public/reel/reel.html
 .DS_Store
 
 # local cloud secrets (never commit)

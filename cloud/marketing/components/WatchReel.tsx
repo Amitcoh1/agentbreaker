@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-// Opens the self-scored reel (public/reel/index.html) in a lightbox. Click the frame once to start
+// Opens the self-scored reel (public/reel/reel.html) in a lightbox. Click the frame once to start
 // (browsers gate its audio until the first interaction — the reel has a click-to-play gate).
 export default function WatchReel() {
   const [open, setOpen] = useState(false);
@@ -35,7 +35,7 @@ export default function WatchReel() {
             <button className="reel-close" onClick={() => setOpen(false)} aria-label="Close reel">
               ✕
             </button>
-            <iframe src="/reel/index.html" title="Breakerbox reel" allow="autoplay; fullscreen" />
+            <iframe src="/reel/reel.html" title="Breakerbox reel" allow="autoplay; fullscreen" />
           </div>
         </div>
       )}

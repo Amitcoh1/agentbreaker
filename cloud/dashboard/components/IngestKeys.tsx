@@ -76,7 +76,7 @@ export default function IngestKeys() {
         <KeyRound className="h-4 w-4" /> Your ingest key
       </div>
       <p className="text-xs text-muted">
-        Set this as <code className="text-fg">AGENTBREAKER_INGEST_KEY</code> where your agents run.
+        Set this as <code className="text-fg">BREAKERBOX_INGEST_KEY</code> where your agents run.
         Runs reported with it are private to your account. We store only a hash — copy it now, it is
         shown once.
       </p>

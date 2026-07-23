@@ -4,7 +4,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from agentbreaker.ledger import InsufficientBudget, Ledger, UnknownAccount
+from breakerbox.ledger import InsufficientBudget, Ledger, UnknownAccount
 
 
 # --- basic reserve / reconcile / release ------------------------------------

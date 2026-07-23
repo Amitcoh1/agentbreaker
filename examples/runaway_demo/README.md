@@ -8,7 +8,7 @@ retained each hop, so the context (and cost) genuinely grows. The **same meterin
 bills both runs**, so the comparison is apples to apples.
 
 ```bash
-pip install -e ..              # or: pip install agentbreaker
+pip install -e ..              # or: pip install breakerbox
 python demo.py
 ```
 

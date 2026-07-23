@@ -8,7 +8,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langgraph.graph import END, START, StateGraph
 
-from agentbreaker import guard
+from breakerbox import guard
 
 
 class _Fake(BaseChatModel):

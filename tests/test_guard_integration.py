@@ -14,8 +14,8 @@ from langchain_core.tools import tool
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
-from agentbreaker import BudgetKilled, BudgetPaused, guard, mark_side_effecting
-from agentbreaker.pricing import cost_microusd
+from breakerbox import BudgetKilled, BudgetPaused, guard, mark_side_effecting
+from breakerbox.pricing import cost_microusd
 
 MODEL = "openai/gpt-4o"
 COST_PER_CALL = cost_microusd(MODEL, 100, 50)  # 750 microUSD

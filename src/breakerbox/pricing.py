@@ -63,7 +63,7 @@ class PriceTable:
         `overrides` merges on top of the file's models (override wins).
         """
         if path is None:
-            raw = files("agentbreaker").joinpath("prices.json").read_text()
+            raw = files("breakerbox").joinpath("prices.json").read_text()
         else:
             raw = Path(path).read_text()
         data = json.loads(raw)

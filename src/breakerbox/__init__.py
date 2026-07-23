@@ -1,14 +1,14 @@
 """Breakerbox: circuit breaker + hierarchical cost budgeting for agent workflows."""
 
-from agentbreaker.guard import (
+from breakerbox.guard import (
     BudgetKilled,
     BudgetPaused,
     GuardedApp,
     guard,
     mark_side_effecting,
 )
-from agentbreaker.ledger import InsufficientBudget, Ledger
-from agentbreaker.pricing import PriceTable, UnknownModelError, cost_microusd
+from breakerbox.ledger import InsufficientBudget, Ledger
+from breakerbox.pricing import PriceTable, UnknownModelError, cost_microusd
 
 __all__ = [
     "BudgetKilled",

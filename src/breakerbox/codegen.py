@@ -74,7 +74,7 @@ def generate(spec: dict) -> str:
         "from langgraph.graph import END, START, StateGraph",
         "from langgraph.checkpoint.memory import MemorySaver",
         "",
-        "from agentbreaker import guard",
+        "from breakerbox import guard",
         "",
     ]
 

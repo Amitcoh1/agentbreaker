@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://agentbreaker.dev/graph.schema.json",
+  "$id": "https://breakerbox.dev/graph.schema.json",
   "title": "AgentBreaker graph spec",
-  "description": "Editor-support schema. The authoritative, semantic checks (budget-sum, connectivity, router labels, cycles) live in agentbreaker.graphspec.validate — this only covers structure.",
+  "description": "Editor-support schema. The authoritative, semantic checks (budget-sum, connectivity, router labels, cycles) live in breakerbox.graphspec.validate — this only covers structure.",
   "type": "object",
   "required": ["version", "config", "nodes", "edges"],
   "additionalProperties": false,

@@ -26,20 +26,20 @@ from typing import Literal
 
 from langchain_core.callbacks import BaseCallbackHandler
 
-from agentbreaker.control import ControlPoller
-from agentbreaker.events import EventLog
-from agentbreaker.ledger import InsufficientBudget, Ledger, ReservationId
-from agentbreaker.meter import (
+from breakerbox.control import ControlPoller
+from breakerbox.events import EventLog
+from breakerbox.ledger import InsufficientBudget, Ledger, ReservationId
+from breakerbox.meter import (
     DEFAULT_MAX_OUTPUT_TOKENS,
     StreamMeter,
     count_message_tokens,
     count_text_tokens,
     reconcile_usage,
 )
-from agentbreaker.pricing import PriceTable
-from agentbreaker.report.generate import render_terminal, write_report
-from agentbreaker.sink import HttpEventSink
-from agentbreaker.tripwire import TripReason, Tripwire
+from breakerbox.pricing import PriceTable
+from breakerbox.report.generate import render_terminal, write_report
+from breakerbox.sink import HttpEventSink
+from breakerbox.tripwire import TripReason, Tripwire
 
 _ROOT = "root"
 
@@ -332,7 +332,7 @@ class GuardedApp:
         self.report_dir = Path(report_dir)
         self.report_to = report_to
         # Live-control endpoint: env override, else derive from report_to (/ingest -> /control)
-        self._control_url = os.getenv("AGENTBREAKER_CONTROL_URL")
+        self._control_url = os.getenv("BREAKERBOX_CONTROL_URL")
         if not self._control_url and report_to and "/" in report_to:
             self._control_url = f"{report_to.rsplit('/', 1)[0]}/control"
         self._runs: dict[str, _Run] = {}
@@ -417,7 +417,7 @@ class GuardedApp:
         sink = None
         if self.report_to:
             sink = HttpEventSink(
-                self.report_to, key=os.getenv("AGENTBREAKER_INGEST_KEY"), run_id=run_id
+                self.report_to, key=os.getenv("BREAKERBOX_INGEST_KEY"), run_id=run_id
             )
         eventlog = EventLog(
             run_id,
@@ -438,7 +438,7 @@ class GuardedApp:
         control = None
         if self.report_to and self._control_url:
             control = ControlPoller(
-                self._control_url, run_id, key=os.getenv("AGENTBREAKER_INGEST_KEY")
+                self._control_url, run_id, key=os.getenv("BREAKERBOX_INGEST_KEY")
             )
         run = _Run(run_id, ledger, tripwire, eventlog, sink=sink, control=control)
         run.handler = _BudgetHandler(self, run)
@@ -490,7 +490,7 @@ def guard(
     sub_budgets: dict[str, float] | None = None,
     topup_policy: Literal["deny", "auto"] | Callable = "deny",
     unknown_model: Literal["fail", "default_rate"] = "fail",
-    report_dir: str | Path = "./agentbreaker_reports",
+    report_dir: str | Path = "./breakerbox_reports",
     report_to: str | None = None,
 ) -> GuardedApp:
     return GuardedApp(

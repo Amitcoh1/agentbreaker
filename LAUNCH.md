@@ -18,8 +18,8 @@ table (the honesty rule at the bottom).
       - LiteLLM: still a proxy that holds provider keys, with flat per-key/session budgets
         (`max_budget`, `max_budget_per_session`). If they shipped hierarchical per-agent
         escrow, soften that comparison row.
-- [ ] **Refresh `prices.json`** with `agentbreaker update-prices`; spot-check headline models.
-- [ ] Confirm PyPI name is free (`pip index versions agentbreaker`); fallback:
+- [ ] **Refresh `prices.json`** with `breakerbox update-prices`; spot-check headline models.
+- [ ] Confirm PyPI name is free (`pip index versions breakerbox`); fallback:
       `agent-breaker`, `langgraph-breaker`. Set the real repo URL in `pyproject.toml`
       (`[project.urls]`).
 - [ ] **Record the 60s builder demo** per `docs/demo-script.md`: drag → Budget Tree fills →

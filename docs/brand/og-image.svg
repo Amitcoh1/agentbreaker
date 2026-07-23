@@ -9,5 +9,5 @@
   <text x="298" y="430" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="24" font-weight="400" fill="#1f2328">hierarchical dollar budgets for agent workflows · safe stops at hop</text>
   <text x="298" y="464" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="24" font-weight="400" fill="#1f2328">boundaries · a visual builder that generates code you own</text>
   <rect x="90" y="520" width="4" height="0" fill="#b8860b"/>
-  <text x="1110" y="580" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="22" fill="#6b7280">pip install agentbreaker</text>
+  <text x="1110" y="580" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="22" fill="#6b7280">pip install breakerbox</text>
 </svg>

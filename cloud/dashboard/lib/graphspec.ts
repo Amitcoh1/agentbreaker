@@ -1,4 +1,4 @@
-// TS mirror of agentbreaker/graphspec.py + codegen.py. It MUST stay byte-identical to the
+// TS mirror of breakerbox/graphspec.py + codegen.py. It MUST stay byte-identical to the
 // Python side — the shared golden fixtures in tests/fixtures/graphspec/ lock both the codegen
 // output and the validator messages (see graphspec.test.ts). No server: the browser generates
 // the Python itself. Number formatting is field-aware (JSON/JS can't tell 5.0 from 5).
@@ -363,7 +363,7 @@ export function generate(spec: GraphSpec): string {
     "from langgraph.graph import END, START, StateGraph",
     "from langgraph.checkpoint.memory import MemorySaver",
     "",
-    "from agentbreaker import guard",
+    "from breakerbox import guard",
     "",
   ];
 

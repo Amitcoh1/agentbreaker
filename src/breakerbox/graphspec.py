@@ -51,7 +51,7 @@ def load_spec(path: str | Path) -> dict:
 
 
 def example_spec() -> dict:
-    return json.loads(files("agentbreaker").joinpath("graph.example.json").read_text())
+    return json.loads(files("breakerbox").joinpath("graph.example.json").read_text())
 
 
 def to_json(spec: dict) -> str:

@@ -53,9 +53,9 @@ app = guard(my_app, budget_usd=5.00, report_to="https://YOUR_REF.functions.supab
 ```
 
 ```bash
-export AGENTBREAKER_INGEST_KEY=...      # the INGEST_KEY you set above
+export BREAKERBOX_INGEST_KEY=...      # the INGEST_KEY you set above
 # control URL is derived from report_to (/ingest -> /control); override with:
-# export AGENTBREAKER_CONTROL_URL=...
+# export BREAKERBOX_CONTROL_URL=...
 ```
 
 Events stream to the dashboard as the run executes (best-effort, non-blocking — a cloud

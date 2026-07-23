@@ -35,7 +35,14 @@ export default function WatchReel() {
             <button className="reel-close" onClick={() => setOpen(false)} aria-label="Close reel">
               ✕
             </button>
-            <video className="reel-video" src="/reel/reel.mp4" controls playsInline preload="metadata" />
+            <video
+              className="reel-video"
+              src="/reel/reel.mp4"
+              poster="/reel/reel-poster.jpg"
+              controls
+              playsInline
+              preload="metadata"
+            />
           </div>
         </div>
       )}

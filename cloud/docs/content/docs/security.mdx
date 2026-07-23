@@ -1,0 +1,32 @@
+---
+title: Security model
+description: No server execution, no stored keys, codegen only — there is nothing to hack into.
+---
+
+## The whole idea
+
+Breakerbox is the visual agent builder that **can't be hacked into — because there's nothing to
+hack**. No server executes your flows. No keys are stored. The builder only generates code.
+
+## Three permanent constraints
+
+- **No server execution.** There is no run button, no runner, no sandbox that executes your graph
+  on our infrastructure. You run the generated Python yourself.
+- **No stored keys.** Breakerbox never stores, receives, or transmits your provider API keys.
+  Bring-your-own-key features (like AI code suggestions in the builder) call the provider
+  **directly from your browser**; the key lives only in your browser's `localStorage`.
+- **Codegen only.** Code generation is one-directional: a spec (JSON) becomes a Python **string**
+  you download or copy. No endpoint evaluates, imports, or templates your code.
+
+## Why this matters
+
+Server-side flow builders that execute flows and store credentials have a long history of remote
+code execution vulnerabilities — several have landed on CISA's Known Exploited Vulnerabilities
+list. Breakerbox removes that entire attack surface by design: the dangerous capabilities simply
+don't exist in the product.
+
+## Ingest keys
+
+The optional cloud dashboard uses a Breakerbox **ingest key** (not a provider key) to associate
+runs with your account. It is stored only as a hash; the plaintext is shown once when you create
+it. A provider (LLM) key is never involved.

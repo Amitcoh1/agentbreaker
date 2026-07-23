@@ -1,0 +1,52 @@
+---
+title: FAQ
+description: Common questions about Breakerbox — gateways, security, metering, and cost.
+---
+
+## Does this replace my gateway (LiteLLM, etc.)?
+
+No — it **complements** it. A gateway caps a *key or org*, enforced per request (a 429 when the key is
+over). Breakerbox caps *one run* and trips *between steps*. Because a key limit is set high enough not
+to block real work, a single runaway run overspends **underneath** it — the limit only fires once the
+damage is account-wide. Run both.
+
+## Do you see my prompts or my provider API keys?
+
+No. Breakerbox never stores, receives, or transmits your LLM/provider keys. Bring-your-own-key features
+(like AI code suggestions in the builder) call the provider **directly from your browser**. See the
+[security model](/docs/security).
+
+## Does it run my graph on your servers?
+
+Never. The visual builder is **codegen-only** — it generates plain Python you download and run yourself.
+There's no server that executes your flow, so there's nothing to hack into.
+
+## What frameworks does it support?
+
+Today `guard()` wraps compiled **LangGraph** apps. Adapters for other agent frameworks are on the
+roadmap.
+
+## How is cost metered — is it accurate?
+
+Tokens are self-metered with `tiktoken`, then reconciled against the provider's reported usage, so the
+receipt reflects what actually happened. Prices come from a built-in table; `unknown_model` controls
+what happens for models it doesn't recognize (see the [reference](/docs/reference)).
+
+## What happens to side effects when it trips?
+
+It trips at **hop boundaries, never mid-call**, so no request is interrupted. On a `kill`, the receipt
+lists any side-effecting tools that fired before the stop.
+
+## Can I resume a paused run?
+
+Yes. `on_trip="pause"` checkpoints the run so you can resume it with more budget (see `topup_policy` in
+the [reference](/docs/reference)).
+
+## Is the cloud dashboard required?
+
+No. Everything works with **zero cloud** — a terminal summary and a single-file HTML receipt on your
+machine. The dashboard is optional, for a shared live view of runs across a team.
+
+## Is it really open source?
+
+Yes — MIT, and the library stays MIT. See [`LICENSE`](https://github.com/Amitcoh1/agentbreaker/blob/main/LICENSE).

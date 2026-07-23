@@ -1,0 +1,74 @@
+---
+title: guard() reference
+description: Every parameter of guard() — the one call that wraps your LangGraph app with a budget.
+---
+
+## Signature
+
+```python
+from agentbreaker import guard
+
+app = guard(
+    compiled_app,          # your compiled LangGraph app
+    budget_usd=5.00,       # required
+    max_hops=100,
+    ttl_seconds=None,
+    velocity_usd_per_min=None,
+    on_trip="pause",       # "pause" | "kill"
+    sub_budgets=None,      # {"node_id": 2.00, ...}
+    topup_policy="deny",   # "deny" | "auto" | callable
+    unknown_model="fail",  # "fail" | "default_rate"
+    report_dir="./agentbreaker_reports",
+    report_to=None,        # cloud ingest URL
+)
+```
+
+`guard()` returns a drop-in wrapper — call `app.invoke(...)` / `app.stream(...)` exactly as before.
+
+## Parameters
+
+| Parameter | Type | Default | What it does |
+|---|---|---|---|
+| `app` | compiled LangGraph app | — | The app to guard. |
+| `budget_usd` | `float` | **required** | Hard dollar cap for the **whole run** — hierarchical across sub-agents. |
+| `max_hops` | `int` | `100` | Trips if the run exceeds this many hops (runaway-loop guard). |
+| `ttl_seconds` | `int \| None` | `None` | Wall-clock limit; trips if the run runs longer. |
+| `velocity_usd_per_min` | `float \| None` | `None` | Spend-rate limit; trips if $/min exceeds it. |
+| `on_trip` | `"pause" \| "kill"` | `"pause"` | `pause` = checkpoint so you can resume with more budget; `kill` = stop and finalize the receipt. |
+| `sub_budgets` | `dict[str, float] \| None` | `None` | Per-node dollar caps (`{node_id: usd}`). A node draws from its own cap **and** the parent's remaining budget. |
+| `topup_policy` | `"deny" \| "auto" \| callable` | `"deny"` | On a pause, whether to add budget: `deny` (stay paused), `auto`, or a callable that decides how much. |
+| `unknown_model` | `"fail" \| "default_rate"` | `"fail"` | A model not in the price table: `fail` (raise) or `default_rate` (meter at a conservative rate). |
+| `report_dir` | `str \| Path` | `"./agentbreaker_reports"` | Where the receipt (terminal summary + single-file HTML + JSON) is written. |
+| `report_to` | `str \| None` | `None` | A cloud ingest URL to stream events to (best-effort, non-blocking). |
+
+## When a budget trips
+
+Breakerbox trips **at hop boundaries, never mid-call**, so no request is interrupted:
+
+- **`on_trip="pause"`** — checkpoints the run; resume later with more budget (see `topup_policy`).
+- **`on_trip="kill"`** — raises `BudgetKilled`; the receipt lists the trip reason and any side-effecting
+  tools that fired before the stop.
+
+```python
+from agentbreaker import BudgetKilled
+
+try:
+    app.invoke({...})
+except BudgetKilled as e:
+    print(e)  # spent, reason, side effects
+```
+
+## Environment variables
+
+| Variable | Purpose |
+|---|---|
+| `AGENTBREAKER_INGEST_KEY` | Auth for `report_to` — your personal key from the dashboard (Settings → Your ingest key), or a shared key. |
+| `AGENTBREAKER_CONTROL_URL` | Override the live pause/kill control endpoint (otherwise derived from `report_to`). |
+
+## Metering
+
+Tokens are self-metered with `tiktoken`, then **reconciled against the provider's reported usage**, so
+the receipt reflects what actually happened rather than an estimate. Prices come from a built-in table;
+use `unknown_model="default_rate"` for models it doesn't recognize.
+
+Next: [receipts](/docs/receipts) · [security model](/docs/security) · [FAQ](/docs/faq).

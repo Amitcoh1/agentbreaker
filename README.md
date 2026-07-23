@@ -180,11 +180,20 @@ like; ship the production-safe version here.**
 | Stores your provider keys | ✅ | ✅ *(proxy)* | ❌ never |
 | Hierarchical per-agent dollar escrow | — | — *(flat session)* | ✅ |
 | Graceful pause/resume at a hop boundary | — | — *(hard error)* | ✅ |
+| Catches a runaway run *under* the org ceiling | — | — *(never fires)* | ✅ |
 | Output is plain, editable Python | partial *(export)* | n/a | ✅ core promise |
 
 LiteLLM/Portkey/Kong-style gateways solve a different layer (org-wide per-key spend) and
 compose fine alongside this — the gateway caps the org, Breakerbox governs one workflow's
-internal structure. Every claim above maps to a public, verifiable fact.
+internal structure.
+
+**The catch most gateway users miss:** a key limit has to sit high enough not to block real work,
+so a single runaway run can burn **$180 while still *under* a $500 ceiling** — the key never fires
+until the damage is already account-wide, and then it 429s everyone. Breakerbox trips that one run
+at $2, at a hop boundary. *A key limit is the fuse box for the building; Breakerbox is the breaker on
+this circuit.*
+
+Every claim above maps to a public, verifiable fact.
 
 ## Notes & limitations (read before you rely on it)
 

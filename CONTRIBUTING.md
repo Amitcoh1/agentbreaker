@@ -1,11 +1,11 @@
 # Contributing to Breakerbox
 
-Thanks for helping out! Breakerbox is the `agentbreaker` Python library plus an optional cloud
+Thanks for helping out! Breakerbox is the `breakerbox` Python library plus an optional cloud
 (marketing site, dashboard, docs, Supabase functions). Small, focused PRs are easiest to review.
 
 ## Repo layout
 
-- `src/agentbreaker/` — the Python library (`guard`, ledger, meter, tripwire, codegen, graphspec, …).
+- `src/breakerbox/` — the Python library (`guard`, ledger, meter, tripwire, codegen, graphspec, …).
 - `tests/` — pytest, including the golden fixtures in `tests/fixtures/graphspec/`.
 - `cloud/dashboard/` — the app (Next.js, the visual builder + run dashboard).
 - `cloud/marketing/` — the marketing site (standalone Next.js).
@@ -38,7 +38,7 @@ Please make sure lint + tests are green before opening a PR (CI runs all of the 
 
 Codegen is mirrored in two languages and **locked byte-for-byte** by golden fixtures:
 
-- Canonical: `src/agentbreaker/codegen.py` + `src/agentbreaker/graphspec.py` (Python).
+- Canonical: `src/breakerbox/codegen.py` + `src/breakerbox/graphspec.py` (Python).
 - Mirror: `cloud/dashboard/lib/graphspec.ts` (TypeScript — the browser generates the code).
 - Locked by: `tests/fixtures/graphspec/*.json` → `*.py` (and `over_allocation.errors.json`),
   checked by `tests/test_codegen.py` (pytest) **and** `cloud/dashboard/lib/graphspec.test.ts` (vitest).

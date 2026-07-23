@@ -6,7 +6,7 @@ description: Every parameter of guard() — the one call that wraps your LangGra
 ## Signature
 
 ```python
-from agentbreaker import guard
+from breakerbox import guard
 
 app = guard(
     compiled_app,          # your compiled LangGraph app
@@ -18,7 +18,7 @@ app = guard(
     sub_budgets=None,      # {"node_id": 2.00, ...}
     topup_policy="deny",   # "deny" | "auto" | callable
     unknown_model="fail",  # "fail" | "default_rate"
-    report_dir="./agentbreaker_reports",
+    report_dir="./breakerbox_reports",
     report_to=None,        # cloud ingest URL
 )
 ```
@@ -38,7 +38,7 @@ app = guard(
 | `sub_budgets` | `dict[str, float] \| None` | `None` | Per-node dollar caps (`{node_id: usd}`). A node draws from its own cap **and** the parent's remaining budget. |
 | `topup_policy` | `"deny" \| "auto" \| callable` | `"deny"` | On a pause, whether to add budget: `deny` (stay paused), `auto`, or a callable that decides how much. |
 | `unknown_model` | `"fail" \| "default_rate"` | `"fail"` | A model not in the price table: `fail` (raise) or `default_rate` (meter at a conservative rate). |
-| `report_dir` | `str \| Path` | `"./agentbreaker_reports"` | Where the receipt (terminal summary + single-file HTML + JSON) is written. |
+| `report_dir` | `str \| Path` | `"./breakerbox_reports"` | Where the receipt (terminal summary + single-file HTML + JSON) is written. |
 | `report_to` | `str \| None` | `None` | A cloud ingest URL to stream events to (best-effort, non-blocking). |
 
 ## When a budget trips
@@ -50,7 +50,7 @@ Breakerbox trips **at hop boundaries, never mid-call**, so no request is interru
   tools that fired before the stop.
 
 ```python
-from agentbreaker import BudgetKilled
+from breakerbox import BudgetKilled
 
 try:
     app.invoke({...})
@@ -62,8 +62,8 @@ except BudgetKilled as e:
 
 | Variable | Purpose |
 |---|---|
-| `AGENTBREAKER_INGEST_KEY` | Auth for `report_to` — your personal key from the dashboard (Settings → Your ingest key), or a shared key. |
-| `AGENTBREAKER_CONTROL_URL` | Override the live pause/kill control endpoint (otherwise derived from `report_to`). |
+| `BREAKERBOX_INGEST_KEY` | Auth for `report_to` — your personal key from the dashboard (Settings → Your ingest key), or a shared key. |
+| `BREAKERBOX_CONTROL_URL` | Override the live pause/kill control endpoint (otherwise derived from `report_to`). |
 
 ## Metering
 

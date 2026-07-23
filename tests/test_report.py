@@ -1,4 +1,4 @@
-from agentbreaker.report.generate import (
+from breakerbox.report.generate import (
     render_html,
     render_terminal,
     summarize,

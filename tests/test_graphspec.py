@@ -1,7 +1,7 @@
 from hypothesis import given
 from hypothesis import strategies as st
 
-from agentbreaker.graphspec import example_spec, validate
+from breakerbox.graphspec import example_spec, validate
 
 START = {"id": "start", "type": "start"}
 END = {"id": "end", "type": "end"}

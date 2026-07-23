@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "agentbreaker"
+name = "breakerbox"
 version = "0.1.0"
 description = "Circuit breaker + hierarchical cost budgeting for AI agent workflows"
 readme = "README.md"
@@ -27,13 +27,13 @@ dependencies = [
 dev = ["pytest>=8", "ruff>=0.6", "hypothesis>=6"]
 
 [project.scripts]
-agentbreaker = "agentbreaker.cli:main"
+breakerbox = "breakerbox.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/amitcohen/agentbreaker"
+Homepage = "https://github.com/Amitcoh1/agentbreaker"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/agentbreaker"]
+packages = ["src/breakerbox"]
 
 [tool.ruff]
 line-length = 100

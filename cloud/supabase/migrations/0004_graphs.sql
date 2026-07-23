@@ -6,7 +6,7 @@ create table if not exists public.graphs (
   id         uuid primary key default gen_random_uuid(),
   owner_id   uuid,                      -- TODO(auth): references auth.users, not null
   name       text not null default 'untitled',
-  spec       jsonb not null,           -- a graph spec (see agentbreaker.graphspec)
+  spec       jsonb not null,           -- a graph spec (see breakerbox.graphspec)
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

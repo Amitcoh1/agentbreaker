@@ -4,7 +4,7 @@ export const LINKS = {
   home: "/",
   privacy: "/privacy",
   github: "https://github.com/Amitcoh1/agentbreaker",
-  pypi: "https://pypi.org/project/agentbreaker/",
+  pypi: "https://pypi.org/project/breakerbox/",
   roadmap: "https://github.com/Amitcoh1/agentbreaker/blob/main/ROADMAP.md",
   changelog: "https://github.com/Amitcoh1/agentbreaker/releases",
   discussions: "https://github.com/Amitcoh1/agentbreaker/discussions",
@@ -17,4 +17,4 @@ export const LINKS = {
   builder: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/dashboard/builder`,
 } as const;
 
-export const PIP = "pip install agentbreaker";
+export const PIP = "pip install breakerbox";

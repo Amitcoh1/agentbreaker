@@ -1,14 +1,14 @@
-"""agentbreaker command-line entry point."""
+"""breakerbox command-line entry point."""
 
 from __future__ import annotations
 
 import argparse
 
-from agentbreaker import pricing_update
+from breakerbox import pricing_update
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="agentbreaker")
+    parser = argparse.ArgumentParser(prog="breakerbox")
     sub = parser.add_subparsers(dest="command", required=True)
 
     up = sub.add_parser("update-prices", help="refresh prices.json from LiteLLM")
@@ -27,7 +27,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "update-prices":
         return pricing_update.run(source=args.source, output=args.output, dry_run=args.dry_run)
     if args.command == "validate":
-        from agentbreaker import graphspec
+        from breakerbox import graphspec
 
         result = graphspec.validate(graphspec.load_spec(args.spec))
         for e in result.errors:
@@ -39,7 +39,7 @@ def main(argv: list[str] | None = None) -> int:
         print("OK" if result.ok else f"INVALID — {len(result.errors)} error(s)")
         return 0 if result.ok else 1
     if args.command == "build":
-        from agentbreaker import codegen, graphspec
+        from breakerbox import codegen, graphspec
 
         spec = graphspec.load_spec(args.spec)
         result = graphspec.validate(spec)

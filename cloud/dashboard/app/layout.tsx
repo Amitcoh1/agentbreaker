@@ -10,7 +10,7 @@ const sans = Inter({
 });
 
 export const metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://agentbreaker-cyan.vercel.app"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://breakerbox-cyan.vercel.app"),
   title: "Breakerbox — your agents can't outspend you",
   description:
     "A hard dollar budget on the workflow itself — hierarchical across sub-agents, enforced between steps. The circuit breaker for AI agents. No server execution, no stored keys.",

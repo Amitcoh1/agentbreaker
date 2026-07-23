@@ -9,10 +9,10 @@ venv/
 .pytest_cache/
 .ruff_cache/
 .hypothesis/
-agentbreaker_reports/
+breakerbox_reports/
 examples/runaway_demo/reports/
 *.html
-!src/agentbreaker/report/*.html.j2
+!src/breakerbox/report/*.html.j2
 !examples/runaway_demo/sample_receipt.html
 !cloud/marketing/public/reel/reel.html
 .DS_Store

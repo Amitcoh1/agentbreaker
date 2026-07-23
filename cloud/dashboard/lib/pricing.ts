@@ -1,5 +1,5 @@
 // Mirror of the Python price table for live cost estimates in the builder. The JSON is a copy
-// of src/agentbreaker/prices.json, kept in sync by `agentbreaker update-prices` and locked by
+// of src/breakerbox/prices.json, kept in sync by `breakerbox update-prices` and locked by
 // pricing.test.ts. Cost math matches pricing.py: microUSD = tokens_in*in + tokens_out*out.
 import prices from "./prices.json";
 

@@ -2,6 +2,7 @@
 // X/Twitter and LinkedIn have no account yet — pointed at the repo until one exists.
 export const LINKS = {
   home: "/",
+  privacy: "/privacy",
   github: "https://github.com/Amitcoh1/agentbreaker",
   pypi: "https://pypi.org/project/agentbreaker/",
   roadmap: "https://github.com/Amitcoh1/agentbreaker/blob/main/ROADMAP.md",

@@ -15,14 +15,20 @@ import {
 const INPUT =
   "mt-1 w-full rounded border border-border bg-surface px-2 py-1 text-sm outline-none focus:border-ink";
 
-// BYO-key node suggestion. Everything here is client-side: the key persists only in this browser
-// and is sent only to the provider you pick. The snippet is for copy/paste — it is never written
-// into the graph spec, so codegen and the golden fixtures are untouched.
-export default function AiSuggest({ node }: { node: SpecNode }) {
+// BYO-key node body. Everything here is client-side: the key persists only in this browser and is
+// sent only to the provider you pick. Code you APPROVE is written to the node's `code` field and
+// emitted verbatim into the generated Python; without approval the node keeps its TODO stub.
+export default function AiSuggest({
+  node,
+  onApprove,
+}: {
+  node: SpecNode;
+  onApprove: (code: string | undefined) => void;
+}) {
   const [settings, setSettings] = useState<AiSettings>(loadAiSettings);
   const [showSettings, setShowSettings] = useState(false);
   const [desc, setDesc] = useState("");
-  const [code, setCode] = useState<string | null>(null);
+  const [draft, setDraft] = useState(node.code ?? "");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -37,9 +43,8 @@ export default function AiSuggest({ node }: { node: SpecNode }) {
   const run = async () => {
     setBusy(true);
     setErr(null);
-    setCode(null);
     try {
-      setCode(await suggestCode(settings, node, desc));
+      setDraft(await suggestCode(settings, node, desc));
     } catch (e) {
       setErr(e instanceof Error ? e.message : "request failed");
     } finally {
@@ -48,18 +53,21 @@ export default function AiSuggest({ node }: { node: SpecNode }) {
   };
 
   const copy = () => {
-    if (code) {
-      navigator.clipboard.writeText(code);
+    if (draft) {
+      navigator.clipboard.writeText(draft);
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     }
   };
 
+  const approved = node.code != null;
+  const dirty = draft.trim() !== (node.code ?? "").trim();
+
   return (
     <div className="space-y-2 border-t border-border pt-3">
       <div className="flex items-center justify-between">
         <span className="flex items-center gap-1.5 text-xs font-medium text-fg">
-          <Sparkles className="h-3.5 w-3.5" /> AI suggest (your key)
+          <Sparkles className="h-3.5 w-3.5" /> Node body (your key)
         </span>
         <button
           onClick={() => setShowSettings((s) => !s)}
@@ -142,17 +150,49 @@ export default function AiSuggest({ node }: { node: SpecNode }) {
       )}
       {err && <p className="text-[11px] text-brass">⚠ {err}</p>}
 
-      {code != null && (
-        <div className="rounded border border-border bg-card">
-          <div className="flex items-center justify-between border-b border-border px-2 py-1">
-            <span className="text-[11px] text-muted">paste into the {node.id}(state) body</span>
-            <button onClick={copy} className="inline-flex items-center gap-1 text-[11px] text-muted hover:text-fg">
-              {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-              {copied ? "copied" : "copy"}
-            </button>
-          </div>
-          <pre className="num max-h-56 overflow-auto p-2 text-[11px] leading-relaxed">{code}</pre>
+      {/* Editable function body. Write it yourself or fill it with Suggest code, then Approve. */}
+      <div className="rounded border border-border bg-card">
+        <div className="flex items-center justify-between border-b border-border px-2 py-1">
+          <span className="text-[11px] text-muted">{node.id}(state) body</span>
+          <button onClick={copy} className="inline-flex items-center gap-1 text-[11px] text-muted hover:text-fg">
+            {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+            {copied ? "copied" : "copy"}
+          </button>
         </div>
+        <textarea
+          rows={6}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder="# write or Suggest the function body, then Approve to include it in the generated Python"
+          className="num max-h-64 w-full resize-y bg-transparent p-2 text-[11px] leading-relaxed outline-none"
+        />
+      </div>
+
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => onApprove(draft.trim() ? draft : undefined)}
+          disabled={!dirty}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-ink/10 px-2.5 py-1.5 text-sm font-medium text-fg hover:bg-ink/[0.16] disabled:opacity-40"
+        >
+          <Check className="h-3.5 w-3.5" /> {approved ? "Update node body" : "Approve & include"}
+        </button>
+        {approved && (
+          <button
+            onClick={() => {
+              onApprove(undefined);
+              setDraft("");
+            }}
+            className="text-[11px] text-muted hover:text-bad"
+          >
+            remove
+          </button>
+        )}
+      </div>
+      {approved && !dirty && (
+        <p className="text-[11px] text-primary">✓ Included in the generated Python.</p>
+      )}
+      {approved && dirty && (
+        <p className="text-[11px] text-brass">Edited — click “Update node body” to re-include.</p>
       )}
     </div>
   );

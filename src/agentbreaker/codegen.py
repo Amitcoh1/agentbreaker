@@ -44,6 +44,17 @@ def _fmt(v) -> str:  # strings / bools (router labels)
     return repr(v)
 
 
+# Approved node code (the function body) -> 4-space-indented lines, or None to fall back to the
+# TODO stub. MUST stay byte-identical to graphspec.ts:codeBody.
+def _code_body(code):
+    if not isinstance(code, str):
+        return None
+    trimmed = code.replace("\r\n", "\n").strip()
+    if not trimmed:
+        return None
+    return ["" if not line.strip() else "    " + line for line in trimmed.split("\n")]
+
+
 def generate(spec: dict) -> str:
     config = spec.get("config", {})
     nodes = spec.get("nodes", [])
@@ -74,30 +85,39 @@ def generate(spec: dict) -> str:
         if t == "model":
             mt = n.get("max_tokens", "default")
             sb = f"${n['sub_budget_usd']:.2f}" if "sub_budget_usd" in n else "unset"
+            body = _code_body(n.get("code")) or [
+                "    # TODO: call your model here and update state",
+                "    return state",
+            ]
             lines += [
                 "",
                 f"def {fn}(state):  # model: {n.get('model')} · max_tokens={mt} · sub_budget={sb}",
-                "    # TODO: call your model here and update state",
-                "    return state",
+                *body,
                 "",
             ]
         elif t == "tool":
             name, se = n.get("name"), bool(n.get("side_effecting"))
+            body = _code_body(n.get("code")) or [
+                f"    # TODO: run the {name} tool and update state",
+                "    return state",
+            ]
             lines += [
                 "",
                 f"def {fn}(state):  # tool: {name} · side_effecting={se}",
-                f"    # TODO: run the {name} tool and update state",
-                "    return state",
+                *body,
                 "",
             ]
         elif t == "router":
             labels = [e.get("condition") for e in edges if e.get("source") == n["id"]]
             default = _fmt(labels[0]) if labels else '"pass"'
+            body = _code_body(n.get("code")) or [
+                "    # TODO: (optional) prep state before routing",
+                "    return state",
+            ]
             lines += [
                 "",
                 f"def {fn}(state):  # router: {n.get('condition') or 'route'}",
-                "    # TODO: (optional) prep state before routing",
-                "    return state",
+                *body,
                 "",
                 "",
                 f"def {fn}_route(state):",

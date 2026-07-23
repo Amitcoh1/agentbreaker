@@ -22,8 +22,8 @@ export default function Hero() {
         <a className="btn2" href={LINKS.github}>
           View on GitHub
         </a>
-        <WatchReel />
       </div>
+      <WatchReel />
       <p className="trust">
         <b>MIT</b> · Python 3.11+ · in-process · <b>no server, no stored keys</b>
       </p>

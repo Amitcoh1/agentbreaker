@@ -20,8 +20,8 @@ export default function WatchReel() {
 
   return (
     <>
-      <button type="button" className="btn2 reel-trigger" onClick={() => setOpen(true)}>
-        <span className="reel-play" aria-hidden="true">▶</span> Watch the reel
+      <button type="button" className="reel-cta" onClick={() => setOpen(true)}>
+        <span className="reel-cta-play" aria-hidden="true">▶</span> Watch the reel
       </button>
       {open && (
         <div

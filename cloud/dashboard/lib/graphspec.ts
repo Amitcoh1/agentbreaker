@@ -14,6 +14,7 @@ export interface SpecNode {
   name?: string;
   side_effecting?: boolean;
   condition?: string;
+  code?: string;
   [k: string]: unknown;
 }
 export interface SpecEdge {
@@ -49,9 +50,9 @@ const NODE_TYPES = ["start", "end", "model", "tool", "router"];
 const NODE_FIELDS: Record<string, string[]> = {
   start: [],
   end: [],
-  model: ["model", "max_tokens", "sub_budget_usd"],
-  tool: ["name", "side_effecting"],
-  router: ["condition"],
+  model: ["model", "max_tokens", "sub_budget_usd", "code"],
+  tool: ["name", "side_effecting", "code"],
+  router: ["condition", "code"],
 };
 const CONFIG_FIELDS = ["budget_usd", "max_hops", "ttl_seconds", "velocity_usd_per_min", "on_trip"];
 const EDGE_FIELDS = ["source", "target", "condition"];
@@ -335,6 +336,15 @@ const money = (v: number) => (Number.isInteger(v) ? `${v}.0` : String(v));
 const intf = (v: number) => String(Math.trunc(v));
 const fmtStr = (v: string) => `"${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 
+// Approved node code (the function body) → 4-space-indented lines, or null to fall back to the
+// TODO stub. MUST stay byte-identical to codegen.py:_code_body.
+function codeBody(code: unknown): string[] | null {
+  if (typeof code !== "string") return null;
+  const trimmed = code.replace(/\r\n/g, "\n").trim();
+  if (!trimmed) return null;
+  return trimmed.split("\n").map((l) => (l.trim() === "" ? "" : "    " + l));
+}
+
 export function generate(spec: GraphSpec): string {
   const config = spec.config ?? {};
   const nodes = spec.nodes ?? [];
@@ -362,30 +372,39 @@ export function generate(spec: GraphSpec): string {
     if (n.type === "model") {
       const mt = "max_tokens" in n ? n.max_tokens : "default";
       const sb = n.sub_budget_usd !== undefined ? `$${n.sub_budget_usd.toFixed(2)}` : "unset";
+      const body = codeBody(n.code) ?? [
+        "    # TODO: call your model here and update state",
+        "    return state",
+      ];
       lines.push(
         "",
         `def ${fn}(state):  # model: ${n.model} · max_tokens=${mt} · sub_budget=${sb}`,
-        "    # TODO: call your model here and update state",
-        "    return state",
+        ...body,
         "",
       );
     } else if (n.type === "tool") {
       const se = n.side_effecting ? "True" : "False";
+      const body = codeBody(n.code) ?? [
+        `    # TODO: run the ${n.name} tool and update state`,
+        "    return state",
+      ];
       lines.push(
         "",
         `def ${fn}(state):  # tool: ${n.name} · side_effecting=${se}`,
-        `    # TODO: run the ${n.name} tool and update state`,
-        "    return state",
+        ...body,
         "",
       );
     } else if (n.type === "router") {
       const labels = edges.filter((e) => e.source === n.id).map((e) => e.condition);
       const def = labels.length ? fmtStr(String(labels[0])) : '"pass"';
+      const body = codeBody(n.code) ?? [
+        "    # TODO: (optional) prep state before routing",
+        "    return state",
+      ];
       lines.push(
         "",
         `def ${fn}(state):  # router: ${n.condition || "route"}`,
-        "    # TODO: (optional) prep state before routing",
-        "    return state",
+        ...body,
         "",
         "",
         `def ${fn}_route(state):`,

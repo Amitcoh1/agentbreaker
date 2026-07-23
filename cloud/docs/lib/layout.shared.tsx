@@ -7,7 +7,13 @@ const MARKETING_URL =
 export function baseOptions(): BaseLayoutProps {
   return {
     nav: {
-      title: "Breakerbox docs",
+      title: (
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontWeight: 600 }}>
+          <img src="/mark-dark.svg" alt="" width={20} height={20} className="brand-mark-dark" />
+          <img src="/mark-light.svg" alt="" width={20} height={20} className="brand-mark-light" />
+          Breakerbox
+        </span>
+      ),
       url: MARKETING_URL,
     },
     githubUrl: "https://github.com/Amitcoh1/agentbreaker",

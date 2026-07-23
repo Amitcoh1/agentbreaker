@@ -3,3 +3,20 @@
 @import "fumadocs-ui/css/preset.css";
 
 @source "../node_modules/fumadocs-ui/dist/**/*.js";
+
+/* Breakerbox brand: brass accent + theme-aware logo swap (dark mark on light, light mark on dark). */
+:root {
+  --color-fd-primary: #d4a017;
+}
+.dark {
+  --color-fd-primary: #d4a017;
+}
+.brand-mark-light {
+  display: none;
+}
+.dark .brand-mark-dark {
+  display: none;
+}
+.dark .brand-mark-light {
+  display: inline;
+}

@@ -46,7 +46,7 @@ def test_router_becomes_conditional_edges_with_side_effect_comments():
 
 
 # --- golden fixtures: the contract the Phase D TS mirror must match ----------
-@pytest.mark.parametrize("name", ["linear", "router_cycle"])
+@pytest.mark.parametrize("name", ["linear", "router_cycle", "with_code"])
 def test_codegen_matches_golden(name):
     assert codegen.generate(_spec(name)) == (FX / f"{name}.py").read_text()
 

@@ -164,7 +164,7 @@ export default function Inspector({
       )}
 
       {(node.type === "model" || node.type === "tool" || node.type === "router") && (
-        <AiSuggest node={node} />
+        <AiSuggest key={node.id} node={node} onApprove={(code) => onChange({ code })} />
       )}
     </div>
   );

@@ -9,25 +9,25 @@ export default {
   theme: {
     extend: {
       colors: {
-        // fixed brand colors (same in any mode)
+        // fixed brand colors (same in any mode) — unified with the marketing palette
         paper: "#faf9f5", // light — used as text on brass / colored buttons
-        cream: "#f5f3ec",
+        cream: "#f2f0e9", // marketing --tx
         slate: "#6b7280",
-        brass: "#b8860b",
-        brassdark: "#d4a017",
-        // dark surfaces
-        bg: "#16181c",
-        surface: "#1f2328", // ink
-        card: "#23272d",
-        border: "#31363d",
+        brass: "#d4a017", // marketing --brass (the brand brass; earned-only)
+        brassdark: "#b8860b", // darker brass for hover/press depth
+        // dark surfaces (marketing palette — one brand)
+        bg: "#0f1114", // marketing --bg
+        surface: "#14171b", // ink — marketing --bg2
+        card: "#181c21", // marketing --panel
+        border: "#303841", // marketing --line2
         // foreground (cream) — tints of these read on dark
-        fg: "#f2efe8",
-        muted: "#9aa1a9",
-        ink: "#f2efe8", // "ink tints" (bg-ink/5 …) are foreground tints in dark mode
-        primary: "#f2efe8", // neutral accent / data / links
-        accent: "#9aa1a9", // secondary = slate-light
-        good: "#f2efe8", // completed / positive = neutral (palette has no green)
-        bad: "#b8860b", // tripped / blocking / error = brass
+        fg: "#f2f0e9", // marketing --tx
+        muted: "#98a1ad", // marketing --tx2
+        ink: "#f2f0e9", // "ink tints" (bg-ink/5 …) are foreground tints in dark mode
+        primary: "#f2f0e9", // neutral accent / data / links
+        accent: "#98a1ad", // secondary = slate-light
+        good: "#f2f0e9", // completed / positive = neutral (palette has no green)
+        bad: "#d4a017", // tripped / blocking / error = brass
       },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],

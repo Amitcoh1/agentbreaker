@@ -59,12 +59,12 @@ function build(events: RunEvent[]): { nodes: Node[]; edges: Edge[] } {
       position: { x: i * 240, y: 80 },
       data: { label: <NodeLabel name={n} cost={usd(microToUsd(cost[n]))} calls={count[n]} trip={isTrip} /> },
       style: {
-        background: "#23272d",
-        border: `1px solid ${isTrip ? "#b8860b" : `rgba(242,239,232,${intensity})`}`,
+        background: "#181c21",
+        border: `1px solid ${isTrip ? "#d4a017" : `rgba(242,239,232,${intensity})`}`,
         borderRadius: 12,
         padding: 0,
         width: 200,
-        color: "#f2efe8",
+        color: "#f2f0e9",
       },
     };
   });
@@ -78,7 +78,7 @@ function build(events: RunEvent[]): { nodes: Node[]; edges: Edge[] } {
     const id = `${a}->${b}`;
     if (seen.has(id)) continue;
     seen.add(id);
-    edges.push({ id, source: a, target: b, animated: true, style: { stroke: "#9aa1a9" } });
+    edges.push({ id, source: a, target: b, animated: true, style: { stroke: "#98a1ad" } });
   }
   return { nodes, edges };
 }
@@ -101,7 +101,7 @@ export default function WorkflowDag({ events }: { events: RunEvent[] }) {
         colorMode="dark"
         minZoom={0.2}
       >
-        <Background color="#2a2f35" gap={20} />
+        <Background color="#303841" gap={20} />
         <Controls showInteractive={false} />
       </ReactFlow>
     </div>

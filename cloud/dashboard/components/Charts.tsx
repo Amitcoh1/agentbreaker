@@ -13,8 +13,8 @@ import {
 import { usd } from "@/lib/format";
 import type { DailySpend } from "@/lib/supabase";
 
-const AXIS = { stroke: "#9aa1a9", fontSize: 11 } as const;
-const GRID = "#2a2f35"; // dark gridlines; data lines are cream (#cfc9ba) for contrast
+const AXIS = { stroke: "#98a1ad", fontSize: 11 } as const;
+const GRID = "#303841"; // dark gridlines; data lines are cream (#cfc9ba) for contrast
 
 export function ChartCard({
   title,
@@ -88,7 +88,7 @@ export function CumulativeCost({ points }: { points: { name: number; spent: numb
             </linearGradient>
           </defs>
           <CartesianGrid stroke={GRID} vertical={false} />
-          <XAxis dataKey="name" tick={AXIS} axisLine={false} tickLine={false} label={{ value: "hop", position: "insideBottom", fill: "#9aa1a9", fontSize: 10, dy: 10 }} />
+          <XAxis dataKey="name" tick={AXIS} axisLine={false} tickLine={false} label={{ value: "hop", position: "insideBottom", fill: "#98a1ad", fontSize: 10, dy: 10 }} />
           <YAxis tick={AXIS} axisLine={false} tickLine={false} width={48} tickFormatter={(v) => usd(v)} />
           <Tooltip content={usdTip} />
           <Area type="monotone" dataKey="spent" stroke="#cfc9ba" strokeWidth={2} fill="url(#g-cum)" />

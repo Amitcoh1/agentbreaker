@@ -3,7 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Blocks, LayoutDashboard, ListChecks, Settings } from "lucide-react";
+import { Blocks, LayoutDashboard, ListChecks, LogOut, Settings } from "lucide-react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 const items = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -14,6 +15,13 @@ const items = [
 
 export default function Sidebar() {
   const path = usePathname();
+
+  async function signOut() {
+    const supabase = createSupabaseBrowserClient();
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  }
+
   return (
     <aside className="hidden w-56 shrink-0 flex-col gap-1 border-r border-border bg-surface p-4 md:flex">
       <div className="mb-3 flex items-center gap-2 px-2 py-2">
@@ -35,7 +43,14 @@ export default function Sidebar() {
           </Link>
         );
       })}
-      <div className="mt-auto px-3 text-xs text-muted">your agents can&apos;t outspend you</div>
+      <button
+        onClick={signOut}
+        className="mt-auto flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-ink/[0.04] hover:text-fg"
+      >
+        <LogOut className="h-4 w-4" />
+        Sign out
+      </button>
+      <div className="px-3 pt-1 text-xs text-muted">your agents can&apos;t outspend you</div>
     </aside>
   );
 }

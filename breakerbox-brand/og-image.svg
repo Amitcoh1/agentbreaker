@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#faf9f5"/>
+  <rect x="90" y="165" width="150" height="216" rx="24" fill="none" stroke="#1f2328" stroke-width="9"/>
+  <rect x="120" y="198" width="90" height="36" rx="9" fill="#1f2328"/>
+  <rect x="120" y="255" width="90" height="36" rx="9" fill="#1f2328"/>
+  <rect x="120" y="315" width="90" height="36" rx="9" fill="#b8860b" transform="rotate(-15 165 333)"/>
+  <text x="295" y="290" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="86" font-weight="600" letter-spacing="-2" fill="#1f2328">breakerbox</text>
+  <text x="298" y="352" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="32" font-weight="400" fill="#6b7280">your agents can't outspend you</text>
+  <text x="298" y="430" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="24" font-weight="400" fill="#1f2328">hierarchical dollar budgets for agent workflows · safe stops at hop</text>
+  <text x="298" y="464" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="24" font-weight="400" fill="#1f2328">boundaries · a visual builder that generates code you own</text>
+  <rect x="90" y="520" width="4" height="0" fill="#b8860b"/>
+  <text x="1110" y="580" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="22" fill="#6b7280">pip install agentbreaker</text>
+</svg>

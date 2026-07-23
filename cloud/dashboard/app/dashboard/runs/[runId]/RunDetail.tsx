@@ -8,7 +8,8 @@ import RunControls from "@/components/RunControls";
 import { StatusBadge } from "@/components/RunsTable";
 import WorkflowDag from "@/components/WorkflowDag";
 import { microToUsd, shortId, usd } from "@/lib/format";
-import { displayStatus, supabase, type Run, type RunEvent } from "@/lib/supabase";
+import { displayStatus, type Run, type RunEvent } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 const TABS = ["Overview", "Timeline", "Workflow", "Logs", "Controls"] as const;
 
@@ -25,7 +26,7 @@ export default function RunDetail({
   const [live, setLive] = useState(false);
 
   useEffect(() => {
-    const db = supabase();
+    const db = createSupabaseBrowserClient();
     const channel = db
       .channel(`run:${run.run_id}`)
       .on(

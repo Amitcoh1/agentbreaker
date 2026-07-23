@@ -18,11 +18,40 @@ const supabase = createClient(PROJECT_URL, SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
 });
 
+async function sha256Hex(s: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return new Response("method not allowed", { status: 405 });
   }
-  if (INGEST_KEY && req.headers.get("x-ingest-key") !== INGEST_KEY) {
+
+  // Resolve the run owner from the ingest key: a personal key (stored hashed in api_keys) maps to a
+  // user; the legacy shared INGEST_KEY ingests anonymous public runs (owner null); else 401.
+  const presentedKey = req.headers.get("x-ingest-key") ?? "";
+  let ownerId: string | null = null;
+  if (presentedKey) {
+    const keyHash = await sha256Hex(presentedKey);
+    const { data: keyRow } = await supabase
+      .from("api_keys")
+      .select("owner_id")
+      .eq("key_hash", keyHash)
+      .maybeSingle();
+    if (keyRow) {
+      ownerId = keyRow.owner_id as string;
+      // best-effort last-used stamp
+      supabase
+        .from("api_keys")
+        .update({ last_used_at: new Date().toISOString() })
+        .eq("key_hash", keyHash)
+        .then(() => {}, () => {});
+    }
+  }
+  if (!ownerId && !(INGEST_KEY && presentedKey === INGEST_KEY)) {
     return new Response("unauthorized", { status: 401 });
   }
 
@@ -36,8 +65,15 @@ Deno.serve(async (req) => {
   const run_id = body.run_id;
   if (!run_id) return new Response("missing run_id", { status: 400 });
 
-  // Ensure the parent run row exists (FK target for events).
-  await supabase.from("runs").upsert({ run_id }, { onConflict: "run_id", ignoreDuplicates: true });
+  // Create the parent run row on first sighting, stamped with its owner. Owned runs are private by
+  // default (public=false); anonymous/legacy runs stay public (shareable link). ignoreDuplicates
+  // keeps the original owner/visibility on later batches.
+  await supabase
+    .from("runs")
+    .upsert(
+      { run_id, owner_id: ownerId, public: ownerId === null },
+      { onConflict: "run_id", ignoreDuplicates: true },
+    );
 
   if (body.events?.length) {
     const rows = body.events.map((e) => ({

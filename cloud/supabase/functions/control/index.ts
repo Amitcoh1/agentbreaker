@@ -22,7 +22,7 @@ const supabase = createClient(PROJECT_URL, SERVICE_ROLE_KEY, {
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "content-type, x-control-key, x-ingest-key",
+  "Access-Control-Allow-Headers": "authorization, content-type, x-control-key, x-ingest-key",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
@@ -63,11 +63,8 @@ Deno.serve(async (req) => {
     return json({ command: cmd.command });
   }
 
-  // Dashboard issues a command.
+  // Dashboard issues a command: the authenticated owner of the run, or a legacy control key.
   if (req.method === "POST") {
-    if (CONTROL_KEY && req.headers.get("x-control-key") !== CONTROL_KEY) {
-      return json({ error: "unauthorized" }, 401);
-    }
     let body: { run_id?: string; command?: string };
     try {
       body = await req.json();
@@ -77,6 +74,28 @@ Deno.serve(async (req) => {
     if (!body.run_id || !["pause", "kill"].includes(body.command ?? "")) {
       return json({ error: "run_id and command (pause|kill) required" }, 400);
     }
+
+    let authorized = false;
+    const authHeader = req.headers.get("authorization") ?? "";
+    const token = authHeader.toLowerCase().startsWith("bearer ") ? authHeader.slice(7) : "";
+    if (token) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser(token);
+      if (user) {
+        const { data: runRow } = await supabase
+          .from("runs")
+          .select("owner_id")
+          .eq("run_id", body.run_id)
+          .maybeSingle();
+        if (runRow && runRow.owner_id === user.id) authorized = true;
+      }
+    }
+    if (!authorized && CONTROL_KEY && req.headers.get("x-control-key") === CONTROL_KEY) {
+      authorized = true;
+    }
+    if (!authorized) return json({ error: "unauthorized" }, 401);
+
     const { error } = await supabase
       .from("commands")
       .insert({ run_id: body.run_id, command: body.command });

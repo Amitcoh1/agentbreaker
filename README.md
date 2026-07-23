@@ -211,6 +211,15 @@ app = guard(my_app, budget_usd=5.00, report_to="https://YOUR_REF.functions.supab
 
 Events stream to the dashboard as the run executes (best-effort and non-blocking — a cloud
 outage never affects the run); each run gets a shareable, unlisted URL with a live timeline.
+
+To keep runs **private to your account**, sign in to the dashboard, create a key under
+**Settings → Your ingest key**, and set it where your agents run:
+
+```bash
+export AGENTBREAKER_INGEST_KEY="abk_…"   # from the dashboard; runs become private to you
+```
+
+Without a personal key the legacy shared key still works and runs stay public (shareable link).
 Deploy runbook and code in [`cloud/`](cloud) (Supabase + Next.js on Vercel).
 
 ## Roadmap

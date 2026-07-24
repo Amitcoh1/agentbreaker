@@ -1,0 +1,22 @@
+name: dependency-review
+
+# Warn-only PR scan: flags known-vulnerable or newly-added risky dependencies in the PR diff.
+# It does NOT block merge — branch protection has no required checks — it just posts a summary
+# comment and a (non-required) check. Complements the repo-wide Dependabot alerts + CodeQL.
+on:
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+  pull-requests: write # to post the summary comment
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          warn-only: true # never fail the check — surface findings without blocking
+          comment-summary-in-pr: on-failure

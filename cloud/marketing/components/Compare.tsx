@@ -23,15 +23,17 @@ export default function Compare() {
             Breakerbox governs the workflow.
           </h2>
           <p className="lede">
-            Run both. Gateways are great at organization-level limits; nothing else governs the
-            internal structure of a single multi-agent run.
+            Run both. A gateway like <b>LiteLLM</b> caps org-wide key spend; a builder like{" "}
+            <b>Langflow</b> is great for prototyping. Neither governs the dollar-budget or internal
+            structure of a single multi-agent run — that&rsquo;s the gap Breakerbox fills: it guards
+            the <b>workflow</b> and runs nothing.
           </p>
         </Reveal>
         <Reveal className="cmp">
           <div className="cmpr hd">
             <div />
-            <div>gateways</div>
-            <div>flow platforms</div>
+            <div>Gateways · LiteLLM</div>
+            <div>Builders · Langflow</div>
             <div className="me">breakerbox</div>
           </div>
           {ROWS.map((r) => (

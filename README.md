@@ -155,17 +155,22 @@ written into the saved graph, so codegen stays deterministic.
 ## Why no Run button?
 
 Server-side flow builders that run your graphs and hold your provider keys have been a
-repeated remote-code-execution target. In Langflow (the category leader, ~100k+ GitHub
-stars, IBM/DataStax-backed) the pattern is well documented and public:
+repeated remote-code-execution target. In Langflow (the category leader — 150k+ GitHub
+stars, backed by DataStax, an IBM company) the pattern is well documented and public:
 
-- **CVE-2025-3248** (CVSS 9.8) — unauthenticated RCE via a code-validation endpoint that
-  passed user input to `exec()`; on CISA's KEV list, used to deploy the Flodrix botnet.
-- **CVE-2025-34291** (CVSS 9.4) — an account-takeover chain that also **exfiltrates the API
-  keys stored in a workspace**; on CISA KEV, used by the MuddyWater APT for initial access.
-- **CVE-2026-33017** (CVSS 9.8) — unauthenticated RCE via the public flow-build endpoint;
-  on CISA KEV, weaponized within ~20 hours of disclosure to drop cryptominers.
-- **CVE-2026-5027** (CVSS 8.8) — path-traversal RCE via file upload, with ~7,000 exposed
-  instances observed under active exploitation.
+- **CVE-2025-3248** (CVSS 9.8) — unauthenticated RCE via the `/api/v1/validate/code`
+  endpoint that passed user input to `exec()`; on CISA's KEV (added 2025-05-05), exploited
+  by the Flodrix botnet.
+- **CVE-2025-34291** (CVSS 9.4 v4.0 / 8.8 v3.1) — a CORS/CSRF account-takeover chain (a
+  victim visits a malicious page) that **exfiltrates the API keys and tokens stored in a
+  workspace**; on CISA KEV (added 2026-05-21). Reportedly used by the MuddyWater APT for
+  initial access (Ctrl-Alt-Intel via The Hacker News; not confirmed by CISA).
+- **CVE-2026-33017** (CVSS 9.8) — unauthenticated RCE via the public flow-build endpoint
+  (`/api/v1/build_public_tmp/…`); on CISA KEV (added 2026-03-25), exploited within ~20 hours
+  of disclosure (Sysdig) and separately used to drop Monero/XMRig cryptominers (Trend Micro).
+- **CVE-2026-5027** (CVSS 8.8) — path-traversal arbitrary file write via `/api/v2/files`,
+  escalatable to RCE; ~7,000 instances exposed (Censys, incl. historical scan data) with
+  active exploitation observed (VulnCheck). Not on CISA KEV.
 
 This isn't a knock on Langflow's product — it's an architectural fact: **a server that runs
 your flows and holds your keys is a high-value target.** Breakerbox removes the target. The
@@ -182,7 +187,7 @@ like; ship the production-safe version here.**
 | Visual graph building | ✅ rich | — | ✅ budget-first |
 | Server executes your flows | ✅ *(attack surface)* | n/a | ❌ by design |
 | Stores your provider keys | ✅ | ✅ *(proxy)* | ❌ never |
-| Hierarchical per-agent dollar escrow | — | — *(flat session)* | ✅ |
+| Hierarchical per-agent dollar escrow | — | — *(flat, per-key)* | ✅ |
 | Graceful pause/resume at a hop boundary | — | — *(hard error)* | ✅ |
 | Catches a runaway run *under* the org ceiling | — | — *(never fires)* | ✅ |
 | Output is plain, editable Python | partial *(export)* | n/a | ✅ core promise |

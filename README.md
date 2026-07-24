@@ -23,7 +23,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/brand/shots/builder.png" alt="The Breakerbox builder: a graph canvas, a live Budget Tree, and guard config" width="820">
+  <img src="docs/brand/shots/demo.gif" alt="A guarded LangGraph run tripping at $0.82 of a $0.90 budget — next hop blocked, 0 side effects fired" width="820">
 </p>
 
 Prototype anywhere; ship with **Breakerbox**. You draw a workflow on a canvas, and it generates
@@ -139,6 +139,10 @@ before it runs. Every run also writes a self-contained `report.html`:
   with the projection as clearly-labelled fine print.
 
 ## Build it visually
+
+<p align="center">
+  <img src="docs/brand/shots/builder.png" alt="The Breakerbox builder: a graph canvas, a live Budget Tree, and guard config" width="820">
+</p>
 
 [`cloud/dashboard/app/builder`](cloud/dashboard/app/builder) is a drag-and-drop canvas
 (model / tool / router / start / end nodes) with a live **Budget Tree** — root budget →

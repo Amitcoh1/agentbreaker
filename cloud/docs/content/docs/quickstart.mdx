@@ -9,6 +9,26 @@ description: Install breakerbox and wrap your LangGraph app with a dollar budget
 pip install breakerbox
 ```
 
+## Start from a template
+
+Zero-to-guarded fast — scaffold a spec plus ready-to-run guarded Python for a common pattern:
+
+```bash
+breakerbox init --list                      # see the templates
+breakerbox init --template research-agent   # writes research-agent.spec.json + research-agent.py
+```
+
+Each template comes with budgets, a velocity limit, and side-effect tags already wired:
+
+| Template | Pattern |
+|---|---|
+| `research-agent` | Plan → web search → synthesize (read-only, pauses on trip) |
+| `support-triage` | Classify → draft reply → send (kills on trip; the send step is side-effecting) |
+| `batch-extract` | Fetch → extract → validate (tight velocity, kills on trip) |
+
+Fill in the node bodies in the generated `.py` and run it — `guard()` is already wired. Prefer a
+canvas? Open the [visual builder](/docs/builder) instead.
+
 ## Guard a workflow
 
 `guard()` wraps your compiled LangGraph app and enforces a dollar budget across the whole run,

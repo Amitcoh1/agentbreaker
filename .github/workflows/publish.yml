@@ -1,12 +1,20 @@
 name: publish
 
-# Publishes to PyPI on a version tag (v*). Uses PyPI Trusted Publishing (OIDC) —
-# no API token/secret to manage. Configure a "pending publisher" on PyPI and a
-# GitHub environment named `pypi` before the first tag (see LAUNCH.md).
+# Publishes to PyPI on every merge to main — but only actually uploads when the version
+# in pyproject.toml is new. PyPI versions are IMMUTABLE (a version can never be published
+# twice), so `skip-existing: true` makes merges that don't bump the version graceful no-ops.
+#
+# To cut a release: bump `version` in pyproject.toml in your PR; merging it publishes that
+# version. Merges that don't touch the version publish nothing.
+#
+# Auth: PyPI Trusted Publishing (OIDC) — no token to manage. One-time setup on PyPI: add a
+# trusted publisher to the `breakerbox` project → owner `Amitcoh1`, repo `agentbreaker`,
+# workflow `publish.yml`, environment `pypi` (see LAUNCH.md). Also create a GitHub
+# environment named `pypi`.
 
 on:
   push:
-    tags: ["v*"]
+    branches: ["main"]
 
 jobs:
   build:
@@ -37,3 +45,6 @@ jobs:
           name: dist
           path: dist/
       - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # Version unchanged since last merge → the file already exists → skip, don't fail.
+          skip-existing: true

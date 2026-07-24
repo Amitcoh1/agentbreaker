@@ -25,9 +25,38 @@ async function sha256Hex(s: string): Promise<string> {
     .join("");
 }
 
+// Constant-time string compare — avoids a timing oracle on the shared secret.
+function ctEq(a: string, b: string): boolean {
+  const ea = new TextEncoder().encode(a);
+  const eb = new TextEncoder().encode(b);
+  if (ea.length !== eb.length) return false;
+  let diff = 0;
+  for (let i = 0; i < ea.length; i++) diff |= ea[i] ^ eb[i];
+  return diff === 0;
+}
+
+const MAX_BODY_BYTES = 5_000_000;
+const MAX_EVENTS = 5000;
+const MAX_DETAIL_BYTES = 16_384;
+
+// Keep a single oversized event from bloating the DB; the stream stays intact.
+function clampDetail(d: unknown): unknown {
+  if (d == null) return {};
+  try {
+    if (JSON.stringify(d).length > MAX_DETAIL_BYTES) return { truncated: true };
+  } catch {
+    return { truncated: true };
+  }
+  return d;
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return new Response("method not allowed", { status: 405 });
+  }
+
+  if (Number(req.headers.get("content-length") ?? "0") > MAX_BODY_BYTES) {
+    return new Response("payload too large", { status: 413 });
   }
 
   // Resolve the run owner from the ingest key: a personal key (stored hashed in api_keys) maps to a
@@ -51,7 +80,7 @@ Deno.serve(async (req) => {
         .then(() => {}, () => {});
     }
   }
-  if (!ownerId && !(INGEST_KEY && presentedKey === INGEST_KEY)) {
+  if (!ownerId && !(INGEST_KEY && ctEq(presentedKey, INGEST_KEY))) {
     return new Response("unauthorized", { status: 401 });
   }
 
@@ -64,6 +93,10 @@ Deno.serve(async (req) => {
 
   const run_id = body.run_id;
   if (!run_id) return new Response("missing run_id", { status: 400 });
+
+  if (body.events && (!Array.isArray(body.events) || body.events.length > MAX_EVENTS)) {
+    return new Response("too many events", { status: 413 });
+  }
 
   // Create the parent run row on first sighting, stamped with its owner. Owned runs are private by
   // default (public=false); anonymous/legacy runs stay public (shareable link). ignoreDuplicates
@@ -90,7 +123,7 @@ Deno.serve(async (req) => {
       actual_microusd: e.actual_microusd ?? null,
       cumulative_microusd: e.cumulative_microusd ?? null,
       side_effecting: e.side_effecting ?? false,
-      detail: e.detail ?? {},
+      detail: clampDetail(e.detail),
     }));
     const { error } = await supabase
       .from("events")
@@ -100,9 +133,12 @@ Deno.serve(async (req) => {
 
   if (body.summary) {
     const s = body.summary;
-    const { error } = await supabase.from("runs").upsert(
-      {
-        run_id,
+    // Update, don't upsert — the parent row already exists (created above with its real owner).
+    // Scope the write to a run this key actually owns so a shared-key holder can't rewrite the
+    // summary of someone else's private run.
+    let q = supabase
+      .from("runs")
+      .update({
         status: s.status,
         trip_reason: s.trip_reason ?? null,
         hops: s.hops,
@@ -112,9 +148,10 @@ Deno.serve(async (req) => {
         saved_usd: s.saved_usd,
         side_effects: s.side_effects_fired ?? [],
         updated_at: new Date().toISOString(),
-      },
-      { onConflict: "run_id" },
-    );
+      })
+      .eq("run_id", run_id);
+    q = ownerId ? q.eq("owner_id", ownerId) : q.is("owner_id", null);
+    const { error } = await q;
     if (error) return new Response(error.message, { status: 500 });
   }
 

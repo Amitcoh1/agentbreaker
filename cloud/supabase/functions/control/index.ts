@@ -32,6 +32,16 @@ const json = (body: unknown, status = 200) =>
     headers: { ...CORS, "content-type": "application/json" },
   });
 
+// Constant-time string compare — avoids a timing oracle on the shared secrets.
+function ctEq(a: string, b: string): boolean {
+  const ea = new TextEncoder().encode(a);
+  const eb = new TextEncoder().encode(b);
+  if (ea.length !== eb.length) return false;
+  let diff = 0;
+  for (let i = 0; i < ea.length; i++) diff |= ea[i] ^ eb[i];
+  return diff === 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
@@ -39,7 +49,7 @@ Deno.serve(async (req) => {
 
   // Library polls for a pending command.
   if (req.method === "GET") {
-    if (INGEST_KEY && req.headers.get("x-ingest-key") !== INGEST_KEY) {
+    if (INGEST_KEY && !ctEq(req.headers.get("x-ingest-key") ?? "", INGEST_KEY)) {
       return json({ error: "unauthorized" }, 401);
     }
     const run_id = url.searchParams.get("run_id");
@@ -75,6 +85,15 @@ Deno.serve(async (req) => {
       return json({ error: "run_id and command (pause|kill) required" }, 400);
     }
 
+    // Resolve the run's owner once. The session-token path must match it; the global
+    // CONTROL_KEY may only act on unowned (public) runs — it must never override the owner
+    // of a private run, who controls it via their session.
+    const { data: runRow } = await supabase
+      .from("runs")
+      .select("owner_id")
+      .eq("run_id", body.run_id)
+      .maybeSingle();
+
     let authorized = false;
     const authHeader = req.headers.get("authorization") ?? "";
     const token = authHeader.toLowerCase().startsWith("bearer ") ? authHeader.slice(7) : "";
@@ -82,16 +101,16 @@ Deno.serve(async (req) => {
       const {
         data: { user },
       } = await supabase.auth.getUser(token);
-      if (user) {
-        const { data: runRow } = await supabase
-          .from("runs")
-          .select("owner_id")
-          .eq("run_id", body.run_id)
-          .maybeSingle();
-        if (runRow && runRow.owner_id === user.id) authorized = true;
-      }
+      if (user && runRow && runRow.owner_id === user.id) authorized = true;
     }
-    if (!authorized && CONTROL_KEY && req.headers.get("x-control-key") === CONTROL_KEY) {
+    if (
+      !authorized &&
+      CONTROL_KEY &&
+      !runRow?.owner_id &&
+      ctEq(req.headers.get("x-control-key") ?? "", CONTROL_KEY)
+    ) {
+      // ponytail: global key limited to public runs; a per-run control-key hash is the proper
+      // upgrade for private-run CLI control (tracked as a follow-up issue).
       authorized = true;
     }
     if (!authorized) return json({ error: "unauthorized" }, 401);

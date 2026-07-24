@@ -22,3 +22,4 @@ cloud/.secrets.local
 
 # supabase CLI temp
 cloud/supabase/.temp/
+**/.temp/

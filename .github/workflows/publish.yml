@@ -5,7 +5,9 @@ name: publish
 # twice), so `skip-existing: true` makes merges that don't bump the version graceful no-ops.
 #
 # To cut a release: bump `version` in pyproject.toml in your PR; merging it publishes that
-# version. Merges that don't touch the version publish nothing.
+# version to PyPI AND creates a matching `v<version>` git tag + GitHub Release. Merges that
+# don't touch the version publish nothing and skip the tag (it already exists) — so PyPI,
+# the git tag, and the GitHub Release stay in lockstep.
 #
 # Auth: PyPI Trusted Publishing (OIDC) — no token to manage. One-time setup on PyPI: add a
 # trusted publisher to the `breakerbox` project → owner `Amitcoh1`, repo `agentbreaker`,
@@ -39,7 +41,9 @@ jobs:
     environment: pypi
     permissions:
       id-token: write # required for Trusted Publishing
+      contents: write # required to create the git tag + GitHub Release
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: dist
@@ -48,3 +52,17 @@ jobs:
         with:
           # Version unchanged since last merge → the file already exists → skip, don't fail.
           skip-existing: true
+      - name: Tag + GitHub Release when the version is new
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(grep -E '^version = ' pyproject.toml | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "Release v$VERSION already exists — nothing to tag."
+          else
+            echo "Cutting release v$VERSION at $GITHUB_SHA"
+            gh release create "v$VERSION" \
+              --title "breakerbox v$VERSION" \
+              --generate-notes \
+              --target "$GITHUB_SHA"
+          fi

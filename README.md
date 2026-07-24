@@ -9,8 +9,10 @@
 
 <p align="center">No server execution&nbsp;·&nbsp;No stored keys&nbsp;·&nbsp;Codegen only</p>
 
+<p align="center"><code>pip install breakerbox</code></p>
+
 <p align="center">
-  <a href="https://marketing-coral-eight.vercel.app/"><strong>🔗 Visit the live site&nbsp;→</strong></a>
+  <a href="https://marketing-coral-eight.vercel.app/"><strong>🔗 Live site</strong></a>&nbsp;·&nbsp;<a href="#the-demo"><strong>The demo&nbsp;↓</strong></a>&nbsp;·&nbsp;<a href="#quickstart"><strong>Quickstart&nbsp;↓</strong></a>
 </p>
 
 <p align="center">
@@ -27,7 +29,8 @@
 Prototype anywhere; ship with **Breakerbox**. You draw a workflow on a canvas, and it generates
 plain, editable LangGraph **Python** you download and run yourself — wrapped in `guard()`, a
 hierarchical dollar budget that stops runaway loops at a hop boundary and writes a receipt of
-exactly where the money went. Three things make it different:
+exactly where the money went. In the [bundled demo](#the-demo), a runaway retry loop that burns
+**$12.63** unguarded stops at **$0.82** under `guard()`. Three things make it different:
 
 1. **Zero attack surface — codegen only.** No endpoint ever executes your flows; no provider
    key is ever stored or transmitted. There's nothing on our side to compromise. (See

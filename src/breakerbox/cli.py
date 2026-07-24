@@ -23,6 +23,12 @@ def main(argv: list[str] | None = None) -> int:
     bld.add_argument("spec", help="path to a graph spec.json")
     bld.add_argument("-o", "--output", default=None, help="write .py here (default: stdout)")
 
+    ini = sub.add_parser("init", help="scaffold a guarded starter from a template")
+    ini.add_argument("-t", "--template", default=None, help="template name (see --list)")
+    ini.add_argument("--list", action="store_true", help="list available templates")
+    ini.add_argument("-o", "--output", default=".", help="output directory (default: cwd)")
+    ini.add_argument("--name", default=None, help="output basename (default: template name)")
+
     args = parser.parse_args(argv)
     if args.command == "update-prices":
         return pricing_update.run(source=args.source, output=args.output, dry_run=args.dry_run)
@@ -55,6 +61,38 @@ def main(argv: list[str] | None = None) -> int:
             print(f"wrote {args.output}")
         else:
             print(code, end="")
+        return 0
+    if args.command == "init":
+        from pathlib import Path
+
+        from breakerbox import codegen, graphspec, templates
+
+        if args.list or not args.template:
+            for name, desc in templates.catalog():
+                print(f"{name:16} {desc}")
+            if not args.list:
+                print("\nPick one:  breakerbox init --template <name>")
+                return 2
+            return 0
+        spec = templates.get(args.template)
+        if spec is None:
+            parser.error(f"unknown template {args.template!r}; run `breakerbox init --list`")
+        result = graphspec.validate(spec)
+        if not result.ok:  # templates are valid by construction; guard against a bad edit
+            for e in result.errors:
+                print("ERROR:", e)
+            return 1
+        base = args.name or args.template
+        out = Path(args.output)
+        out.mkdir(parents=True, exist_ok=True)
+        spec_path = out / f"{base}.spec.json"
+        code_path = out / f"{base}.py"
+        spec_path.write_text(graphspec.to_json(spec) + "\n")
+        code_path.write_text(codegen.generate(spec))
+        print(f"wrote {spec_path}")
+        print(f"wrote {code_path}")
+        print(f"\nNext:  edit {code_path} — fill in the node bodies, then run it.")
+        print("       guard() is already wired from the template.")
         return 0
     parser.error(f"unknown command {args.command!r}")
     return 2

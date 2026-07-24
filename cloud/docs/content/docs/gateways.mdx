@@ -1,0 +1,52 @@
+---
+title: Behind a gateway
+description: Compose guard() with LiteLLM, Portkey, or any OpenAI-compatible gateway — the gateway routes and holds the key; breakerbox budgets the workflow.
+---
+
+## Complements, not competitors
+
+A gateway (LiteLLM, Portkey, Kong, …) sits between your app and the providers: it holds the org
+key, routes and falls back across models, and enforces a **flat** per-key budget. Breakerbox
+governs the **internal structure of one run** — a hierarchical dollar budget that trips at hop
+boundaries. Different layers, so run both: the gateway caps the org; breakerbox catches the
+runaway run *under* that ceiling.
+
+Because breakerbox meters through a LangChain callback (not the network), it composes with **any**
+OpenAI-compatible gateway with no extra wiring — point your model at the gateway's base URL and
+wrap the app in `guard()`.
+
+## LiteLLM
+
+Your LiteLLM proxy holds the provider key and routes; the model just talks to the proxy.
+
+```python
+from langchain_openai import ChatOpenAI
+from breakerbox import guard
+
+model = ChatOpenAI(
+    model="openai/gpt-4o",              # the name breakerbox meters (match the price table)
+    base_url="http://localhost:4000",   # your LiteLLM proxy
+    api_key="sk-litellm-...",           # a LiteLLM virtual key, not a provider key
+)
+# build your LangGraph app with `model`, compile it, then:
+app = guard(compiled_app, budget_usd=5.00)   # gateway routes + holds the key; guard budgets the run
+```
+
+## Portkey
+
+```python
+model = ChatOpenAI(
+    model="openai/gpt-4o",
+    base_url="https://api.portkey.ai/v1",
+    default_headers={"x-portkey-api-key": "...", "x-portkey-virtual-key": "..."},
+)
+app = guard(compiled_app, budget_usd=5.00)
+```
+
+## Model naming
+
+Breakerbox meters by the model name it sees, so the name your gateway reports must match the
+[price table](/docs/reference#metering) (e.g. `openai/gpt-4o`). If the gateway surfaces a bare
+deployment name breakerbox doesn't recognize, it **fails before the call is dispatched** (never
+silently at $0) — add the model to the table, or pass `unknown_model="default_rate"` to meter it at
+a conservative default.

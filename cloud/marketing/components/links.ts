@@ -1,5 +1,9 @@
 // Real targets for the design's placeholder href="#" links.
 // X/Twitter and LinkedIn have no account yet — pointed at the repo until one exists.
+// The app (dashboard + builder) is a separate deploy; point cross-domain to it. When a real
+// domain lands, set NEXT_PUBLIC_APP_URL and it overrides this interim Vercel URL.
+const APP = process.env.NEXT_PUBLIC_APP_URL ?? "https://agentbreaker-cyan.vercel.app";
+
 export const LINKS = {
   home: "/",
   privacy: "/privacy",
@@ -13,8 +17,8 @@ export const LINKS = {
   linkedin: "https://github.com/Amitcoh1/agentbreaker",
   // Docs is its own deploy (cloud/docs); falls back to the local stub if the URL isn't set.
   docs: process.env.NEXT_PUBLIC_DOCS_URL ?? "/docs",
-  // The app is a separate deploy now; point cross-domain to it (falls back to a relative path).
-  builder: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/dashboard/builder`,
+  builder: `${APP}/dashboard/builder`,
+  dashboard: `${APP}/dashboard`,
 } as const;
 
 export const PIP = "pip install breakerbox";

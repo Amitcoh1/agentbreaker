@@ -12,6 +12,7 @@ const NAV = [
 ];
 
 const RESOURCES = [
+  { href: LINKS.dashboard, label: "Dashboard", desc: "Watch runs live · sign in for private runs" },
   { href: LINKS.docs, label: "Docs", desc: "Quickstart, builder guide, receipts" },
   { href: LINKS.roadmap, label: "Roadmap", desc: "Where Breakerbox is headed" },
   { href: LINKS.changelog, label: "Changelog", desc: "Releases and notes" },

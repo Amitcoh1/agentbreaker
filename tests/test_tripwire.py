@@ -1,4 +1,4 @@
-from agentbreaker.tripwire import TripReason, Tripwire
+from breakerbox.tripwire import TripReason, Tripwire
 
 
 class Clock:

@@ -53,7 +53,7 @@ the entire output. There is:
   edge function. They live in *your* environment, used by the code *you* run.
 
 The codegen runs in your browser, and the canonical generator is a pure Python function
-(`agentbreaker build spec.json`) locked to the browser version by shared golden-fixture tests
+(`breakerbox build spec.json`) locked to the browser version by shared golden-fixture tests
 in CI. If there's no server executing your graph and no vault of keys, there is simply nothing
 in our infrastructure for an attacker to compromise. The class of CVE above cannot exist here
 because the precondition — a server that runs your code — was removed.

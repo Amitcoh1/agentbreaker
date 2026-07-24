@@ -1,6 +1,6 @@
 from langchain_core.messages import HumanMessage
 
-from agentbreaker.meter import (
+from breakerbox.meter import (
     StreamMeter,
     count_message_tokens,
     count_text_tokens,

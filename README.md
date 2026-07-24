@@ -33,8 +33,8 @@ exactly where the money went. Three things make it different:
 3. **Code you own.** The output is readable, hand-editable Python — scaffolding, not a walled
    garden.
 
-> **Breakerbox** is the product; the Python package is **`agentbreaker`** (`pip install
-> agentbreaker`). The import, CLI, and API names are unchanged.
+> **Breakerbox** is the product; the Python package is **`breakerbox`** (`pip install
+> breakerbox`). The import, CLI, and API names are unchanged.
 
 ## Contents
 
@@ -53,13 +53,13 @@ exactly where the money went. Three things make it different:
 ## Quickstart
 
 ```bash
-pip install agentbreaker
+pip install breakerbox
 ```
 
 Wrap the compiled LangGraph app you already have — the call site doesn't change:
 
 ```python
-from agentbreaker import guard
+from breakerbox import guard
 
 app = guard(
     my_langgraph_app,
@@ -137,7 +137,7 @@ before it runs. Every run also writes a self-contained `report.html`:
 (model / tool / router / start / end nodes) with a live **Budget Tree** — root budget →
 per-node allocations → unallocated remainder. Over-allocate and it turns red and **blocks
 export**. Hit **Generate** and you get the guarded Python above, ready to copy or download.
-Everything runs in your browser; the spec → Python codegen is shared with the `agentbreaker
+Everything runs in your browser; the spec → Python codegen is shared with the `breakerbox
 build spec.json` CLI and locked to it by golden-fixture tests (Python and TS, enforced in CI).
 
 **AI suggest (bring your own key).** Any model/tool/router node has an optional "Suggest code"
@@ -204,7 +204,7 @@ Every claim above maps to a public, verifiable fact.
   late (overshoot bounded by a single call) — the receipt flags that hop. Set `max_tokens`
   and it stops strictly under budget.
 - **Prices** (`prices.json`, ~2000 models) are sourced from LiteLLM's community-maintained
-  price table. Refresh them any time with `agentbreaker update-prices` (bundled table is the
+  price table. Refresh them any time with `breakerbox update-prices` (bundled table is the
   offline fallback). Still spot-check the models you care about. Override per-model or set
   `unknown_model="default_rate"` to meter unknown models at a conservative rate instead of
   failing.
@@ -225,7 +225,7 @@ To keep runs **private to your account**, sign in to the dashboard, create a key
 **Settings → Your ingest key**, and set it where your agents run:
 
 ```bash
-export AGENTBREAKER_INGEST_KEY="abk_…"   # from the dashboard; runs become private to you
+export BREAKERBOX_INGEST_KEY="abk_…"   # from the dashboard; runs become private to you
 ```
 
 Without a personal key the legacy shared key still works and runs stay public (shareable link).

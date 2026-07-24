@@ -13,10 +13,10 @@ The core library is MIT-licensed and stays that way. Forever.
 - [x] Hierarchical budget escrow (reserve → reconcile, parent→child allocation)
 - [x] Graceful trip at hop boundaries: `pause` (resumable) / `kill` — never a mid-flight 429
 - [x] Self-metering (local token counting + stream metering, provider `usage` cross-check)
-- [x] Live model pricing pulled from the community table (`agentbreaker update-prices`)
+- [x] Live model pricing pulled from the community table (`breakerbox update-prices`)
 - [x] The receipt: terminal summary + self-contained HTML report per run, leading with the
       real number (stopped at $Y / budget $Z), projection as labelled fine print
-- [x] Framework-agnostic graph spec + validator + `agentbreaker build` / `validate` CLI
+- [x] Framework-agnostic graph spec + validator + `breakerbox build` / `validate` CLI
 - [x] Visual builder: drag-and-drop graph → readable, guard-wrapped Python (codegen only —
       see "What we won't build")
 - [x] Budget Tree: allocate per-agent budgets on the canvas; over-allocation blocks export
@@ -34,7 +34,7 @@ The core library is MIT-licensed and stays that way. Forever.
 - [ ] **Gateway composability** — documented, tested setups running Breakerbox behind
       LiteLLM / Portkey / others: your gateway caps the org, Breakerbox governs the
       workflow. Complements, not competitors.
-- [ ] **Policy templates** — `agentbreaker init --template research-agent`: prewired budgets,
+- [ ] **Policy templates** — `breakerbox init --template research-agent`: prewired budgets,
       velocity limits, and side-effect tags for common agent patterns.
 - [ ] **Shareable receipts** — one link to a run's timeline.
 
@@ -42,7 +42,7 @@ The core library is MIT-licensed and stays that way. Forever.
 
 - **Side-effect safety kit** — idempotency-key helpers for side-effecting tools, and a
   compensation checklist on the receipt when a run stops after side effects fired.
-- **Policy-as-code** — `agentbreaker.yaml` versioned in git: budgets and trip rules reviewed
+- **Policy-as-code** — `breakerbox.yaml` versioned in git: budgets and trip rules reviewed
   like code, enforced in CI and at runtime.
 - **More frameworks** — adapters follow where the ecosystem goes.
 - **Team features** — shared run history, alerts on trip, team budget policies. These ship

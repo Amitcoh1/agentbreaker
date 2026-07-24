@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from agentbreaker.pricing import (
+from breakerbox.pricing import (
     PriceTable,
     Rate,
     UnknownModelError,

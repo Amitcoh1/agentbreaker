@@ -1,6 +1,6 @@
 # Minimal Supabase CLI config. The live project ref is passed via --project-ref at deploy
 # time (and kept in cloud/.secrets.local), so nothing environment-specific lives here.
-project_id = "agentbreaker"
+project_id = "breakerbox"
 
 [functions.ingest]
 verify_jwt = false

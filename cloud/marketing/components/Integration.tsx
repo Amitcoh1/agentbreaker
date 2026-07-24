@@ -2,7 +2,7 @@ import Reveal from "./Reveal";
 
 // Preformatted, syntax-highlighted exactly as the design. Kept as an HTML string so the pre
 // whitespace and highlight spans survive JSX whitespace collapsing.
-const CODE = `<span class="k">from</span> agentbreaker <span class="k">import</span> guard
+const CODE = `<span class="k">from</span> breakerbox <span class="k">import</span> guard
 
 app = <span class="f">guard</span>(
     my_langgraph_app,

@@ -2,7 +2,7 @@
 from langgraph.graph import END, START, StateGraph
 from langgraph.checkpoint.memory import MemorySaver
 
-from agentbreaker import guard
+from breakerbox import guard
 
 
 def planner(state):  # model: openai/gpt-4o · max_tokens=1024 · sub_budget=$2.00

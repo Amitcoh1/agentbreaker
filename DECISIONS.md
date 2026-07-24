@@ -4,9 +4,9 @@ Per spec §9.1: record decisions made where the spec was ambiguous or silent.
 
 ## Phase 0
 
-- **Package lives at repo root**, not a nested `agentbreaker/agentbreaker/`.
-  The working dir is already `agent-breaker/`, so the layout is `src/agentbreaker/`
-  directly under it (spec §9.2's outer `agentbreaker/` is the repo dir itself).
+- **Package lives at repo root**, not a nested `breakerbox/breakerbox/`.
+  The working dir is already `agent-breaker/`, so the layout is `src/breakerbox/`
+  directly under it (spec §9.2's outer `breakerbox/` is the repo dir itself).
 - **Deps added per phase, not all upfront.** §5 lists langgraph/tiktoken/jinja2/pydantic
   as the *ceiling* of allowed runtime deps. Phase 0 (pricing only) needs none, so
   `dependencies = []`. Later phases add what they import.
@@ -121,7 +121,7 @@ Per spec §9.1: record decisions made where the spec was ambiguous or silent.
   break a run. The core library is fully functional with `report_to` unset.
 - **The library streams the raw event rows** (for the live timeline) and the final `summary`
   (for the run list) to one edge-function endpoint; the ingest key comes from
-  `AGENTBREAKER_INGEST_KEY` (env), not a `guard()` argument, so secrets stay out of code.
+  `BREAKERBOX_INGEST_KEY` (env), not a `guard()` argument, so secrets stay out of code.
 - **`report_to` added to `guard()`** — an extension beyond the frozen §9.3 signature,
   explicitly sanctioned by Phase 5 ("the middleware gains an optional `report_to=` config").
 - **Supabase RLS is public-read** (`runs.public` default true): a run URL is an unlisted,
@@ -134,7 +134,7 @@ Per spec §9.1: record decisions made where the spec was ambiguous or silent.
 ## Live model prices (Phase I)
 
 - **Prices are pulled from LiteLLM's `model_prices_and_context_window.json`** — a
-  comprehensive, community-maintained table (~2000 chat models) — via `agentbreaker
+  comprehensive, community-maintained table (~2000 chat models) — via `breakerbox
   update-prices` (`pricing_update.py` + `cli.py`, a new `[project.scripts]` entry). Their
   per-token costs are scaled to our per-million-token schema; bare model names get their
   `litellm_provider` prefix, already-prefixed keys are kept. The bundled `prices.json` is now
@@ -154,7 +154,7 @@ Per spec §9.1: record decisions made where the spec was ambiguous or silent.
   even if the guard was built with `on_trip="pause"`. A remote `pause` with no checkpointer
   falls back to `kill` (can't preserve state), mirroring the construction-time rule.
 - **Control URL is derived** from `report_to` (`…/ingest` → `…/control`) or set via
-  `AGENTBREAKER_CONTROL_URL`. The poller authenticates with the ingest key; **issuing** a
+  `BREAKERBOX_CONTROL_URL`. The poller authenticates with the ingest key; **issuing** a
   command from the dashboard requires a separate `CONTROL_KEY`, so a public/unlisted run URL
   can't be used to kill someone's agent.
 - **Poller stops on finalize** and after capturing one command (no busy-loop).

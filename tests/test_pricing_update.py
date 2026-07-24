@@ -1,5 +1,5 @@
-from agentbreaker.pricing import PriceTable
-from agentbreaker.pricing_update import build_models, build_table
+from breakerbox.pricing import PriceTable
+from breakerbox.pricing_update import build_models, build_table
 
 # A LiteLLM-shaped fixture (no network).
 LITELLM = {

@@ -24,7 +24,7 @@ Say: *"You can't export a graph whose child budgets exceed the parent's."*
 **0:30 — Fix.** Change it to `1.00`. Red clears, unallocated back to $0.50, export re-enables.
 
 **0:36 — Generate.** Click **Generate Python**. A modal shows the real, readable code:
-`from agentbreaker import guard`, one `def` per node with TODO bodies, `add_conditional_edges`
+`from breakerbox import guard`, one `def` per node with TODO bodies, `add_conditional_edges`
 for the router, and `guard(..., sub_budgets={...}, on_trip="pause")`. Say: *"That's the whole
 output — a Python string. No server ran anything; your API keys never left your machine."*
 Click **Copy** (or **Download .py**).

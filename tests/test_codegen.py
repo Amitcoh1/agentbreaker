@@ -7,7 +7,7 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 
-from agentbreaker import BudgetKilled, codegen, graphspec
+from breakerbox import BudgetKilled, codegen, graphspec
 
 FX = Path(__file__).parent / "fixtures" / "graphspec"
 
@@ -20,7 +20,7 @@ def _spec(name):
 def test_output_parses_and_wires_guard():
     code = codegen.generate(_spec("linear"))
     ast.parse(code)  # valid Python
-    assert "from agentbreaker import guard" in code
+    assert "from breakerbox import guard" in code
     assert "builder.compile(checkpointer=MemorySaver())" in code
     assert 'on_trip="pause"' in code
 

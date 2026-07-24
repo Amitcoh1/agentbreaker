@@ -24,4 +24,4 @@ Code contexts: system monospace.
 Never use pure black (#000) or pure white (#fff).
 
 ## Naming
-Brand/product: Breakerbox. Python package remains `agentbreaker` (or `breakerbox` if verified free on PyPI). Tagline: "your agents can't outspend you" or formal variant "the circuit breaker for AI agents".
+Brand/product: Breakerbox. Python package remains `breakerbox` (or `breakerbox` if verified free on PyPI). Tagline: "your agents can't outspend you" or formal variant "the circuit breaker for AI agents".

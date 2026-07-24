@@ -197,6 +197,11 @@ until the damage is already account-wide, and then it 429s everyone. Breakerbox 
 at $2, at a hop boundary. *A key limit is the fuse box for the building; Breakerbox is the breaker on
 this circuit.*
 
+**vs LiteLLM / vs Langflow, in one line:** a gateway like **LiteLLM** guards the *key* — one flat
+ceiling, blind to a single run's internal structure. A builder like **Langflow** *runs* your flow —
+server-side, holding your keys. **Breakerbox guards the *workflow* and runs nothing:** a hierarchical
+per-agent budget baked into plain Python you own. Prototype with either; ship the guarded version here.
+
 Every claim above maps to a public, verifiable fact.
 
 ## Notes & limitations (read before you rely on it)

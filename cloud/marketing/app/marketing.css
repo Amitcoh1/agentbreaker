@@ -389,6 +389,19 @@ body:has(.mkt) { background: #0f1114; }
   background: transparent;
 }
 .mkt .btn2:hover { border-color: var(--tx3); background: var(--panel); }
+.mkt .btn1 {
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  padding: 13px 22px;
+  border: 1px solid var(--brass);
+  border-radius: 11px;
+  background: var(--brass);
+  color: #0f1114;
+  transition: transform 0.15s, filter 0.15s;
+}
+.mkt .btn1:hover { filter: brightness(1.08); }
+.mkt .btn1:active { transform: scale(0.97); }
 .mkt .trust {
   margin-top: 24px;
   font-family: var(--mono);

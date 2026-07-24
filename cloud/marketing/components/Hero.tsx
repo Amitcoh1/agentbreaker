@@ -18,6 +18,9 @@ export default function Hero() {
         between steps, never a mid-flight 429. When a loop runs away, Breakerbox trips. Safely.
       </p>
       <div className="ctas">
+        <a className="btn1" href={LINKS.dashboard}>
+          Get started →
+        </a>
         <CopyPip />
         <a className="btn2" href={LINKS.github}>
           View on GitHub

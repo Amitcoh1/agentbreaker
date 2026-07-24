@@ -241,6 +241,8 @@ Every claim above maps to a public, verifiable fact.
 
 ## Cloud dashboard (optional)
 
+**[→ Open the dashboard](https://agentbreaker-cyan.vercel.app/dashboard)** — watch runs stream live, and sign in to keep runs private to your account.
+
 Everything above works with zero cloud. If you want a shared, **live** view of runs, point
 the guard at a Supabase-backed dashboard:
 

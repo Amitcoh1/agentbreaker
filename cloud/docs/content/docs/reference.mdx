@@ -40,6 +40,7 @@ app = guard(
 | `unknown_model` | `"fail" \| "default_rate"` | `"fail"` | A model not in the price table: `fail` (raise) or `default_rate` (meter at a conservative rate). |
 | `report_dir` | `str \| Path` | `"./breakerbox_reports"` | Where the receipt (terminal summary + single-file HTML + JSON) is written. |
 | `report_to` | `str \| None` | `None` | A cloud ingest URL to stream events to (best-effort, non-blocking). |
+| `otel` | `bool` | `False` | Emit an OpenTelemetry span per run + per hop (GenAI semantic conventions). Needs `pip install 'breakerbox[otel]'`. |
 
 ## When a budget trips
 
@@ -70,5 +71,32 @@ except BudgetKilled as e:
 Tokens are self-metered with `tiktoken`, then **reconciled against the provider's reported usage**, so
 the receipt reflects what actually happened rather than an estimate. Prices come from a built-in table;
 use `unknown_model="default_rate"` for models it doesn't recognize.
+
+## OpenTelemetry export
+
+Set `otel=True` to land receipts in the observability stack you already run (Datadog, Grafana,
+Langfuse, …). Breakerbox emits **one span per run** (`breakerbox.run`) with a **child span per
+model hop** (`chat <model>`) and tool hop (`execute_tool <name>`), tagged with the OTel **GenAI
+semantic conventions** (`gen_ai.system`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`,
+`gen_ai.usage.output_tokens`) plus a `breakerbox.cost_usd` attribute. You configure the exporter
+the normal OTel way; breakerbox just emits the spans.
+
+```bash
+pip install 'breakerbox[otel]'
+```
+
+```python
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+provider = TracerProvider()
+provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))  # → your collector
+trace.set_tracer_provider(provider)
+
+from breakerbox import guard
+app = guard(my_app, budget_usd=5.00, otel=True)   # spans now flow to your collector
+```
 
 Next: [receipts](/docs/receipts) · [security model](/docs/security) · [FAQ](/docs/faq).

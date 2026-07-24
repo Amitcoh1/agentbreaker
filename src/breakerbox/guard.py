@@ -93,6 +93,7 @@ class _Call:
     estimate: int
     declared_max: bool  # did the call declare max_tokens? (else the reserve may under-count)
     stream: StreamMeter
+    span: object | None = None  # OTel span for this hop, when otel=True
 
 
 @dataclass
@@ -110,6 +111,7 @@ class _Run:
     remote_action: str | None = None  # "pause" | "kill" from the dashboard
     calls: dict[str, _Call] = field(default_factory=dict)
     side_effect_fired: list[str] = field(default_factory=list)
+    otel_run_span: object | None = None  # parent run span, when otel=True
 
 
 def _model_name(serialized: dict | None, metadata: dict | None) -> str:
@@ -207,8 +209,11 @@ class _BudgetHandler(BaseCallbackHandler):
         account = node if node in self._g.sub_budgets else _ROOT
         res = self._reserve_or_trip(account, estimate)
         self._run.tripwire.note_hop()
-        self._run.calls[run_id] = _Call(res, account, node, model, tokens_in, estimate,
-                                         declared_max, StreamMeter(model))
+        call = _Call(res, account, node, model, tokens_in, estimate,
+                     declared_max, StreamMeter(model))
+        if self._g._otel is not None:
+            call.span = self._g._otel.start_hop(self._run.otel_run_span, node, model)
+        self._run.calls[run_id] = call
         led = self._run.ledger
         self._run.eventlog.emit(
             "reserve", node=node, parent=parent, model=model, tokens_in=tokens_in,
@@ -261,6 +266,8 @@ class _BudgetHandler(BaseCallbackHandler):
             tokens_out=final_out, estimate_microusd=call.estimate, actual_microusd=actual,
             cumulative_microusd=led.total_spent(), detail=detail,
         )
+        if call.span is not None:
+            self._g._otel.end_hop(call.span, final_in, final_out, actual)
         # soft check: velocity/budget crossed -> mark tripped, enforced at NEXT gate
         reason = tw.check(led.total_spent())
         if reason:
@@ -270,6 +277,8 @@ class _BudgetHandler(BaseCallbackHandler):
         call = self._run.calls.pop(str(run_id), None)
         if call:
             self._run.ledger.release(call.res_id)
+            if call.span is not None:
+                self._g._otel.end_hop(call.span, None, None, 0, error=error)
 
     # ---- tools ----
     def on_tool_start(self, serialized, input_str, *, run_id, parent_run_id=None,
@@ -284,6 +293,8 @@ class _BudgetHandler(BaseCallbackHandler):
             "tool_call", node=name, side_effecting=side,
             cumulative_microusd=self._run.ledger.total_spent(),
         )
+        if self._g._otel is not None:
+            self._g._otel.tool_span(self._run.otel_run_span, name, side)
 
 
 def mark_side_effecting(tool):
@@ -309,6 +320,7 @@ class GuardedApp:
         unknown_model: Literal["fail", "default_rate"],
         report_dir: str | Path,
         report_to: str | None,
+        otel: bool,
     ) -> None:
         if on_trip not in ("pause", "kill"):
             raise ValueError(f"on_trip must be pause|kill, got {on_trip!r}")
@@ -335,6 +347,11 @@ class GuardedApp:
         self._control_url = os.getenv("BREAKERBOX_CONTROL_URL")
         if not self._control_url and report_to and "/" in report_to:
             self._control_url = f"{report_to.rsplit('/', 1)[0]}/control"
+        self._otel = None
+        if otel:
+            from breakerbox.otel import OtelSpans
+
+            self._otel = OtelSpans()
         self._runs: dict[str, _Run] = {}
         self._resumable: dict[str, _Run] = {}
         self.last_report_path: Path | None = None
@@ -382,6 +399,8 @@ class GuardedApp:
     def _finalize(self, run: _Run) -> Path:
         if run.control is not None:
             run.control.stop()
+        if self._otel is not None and run.otel_run_span is not None:
+            self._otel.end_run(run.otel_run_span, run.ledger.total_spent())
         html_path, summary = write_report(run.run_id, run.eventlog.path, self.report_dir)
         run.report_path = html_path
         self.last_report_path = html_path
@@ -441,6 +460,8 @@ class GuardedApp:
                 self._control_url, run_id, key=os.getenv("BREAKERBOX_INGEST_KEY")
             )
         run = _Run(run_id, ledger, tripwire, eventlog, sink=sink, control=control)
+        if self._otel is not None:
+            run.otel_run_span = self._otel.start_run(run_id, self.budget_micro)
         run.handler = _BudgetHandler(self, run)
         return run
 
@@ -492,8 +513,9 @@ def guard(
     unknown_model: Literal["fail", "default_rate"] = "fail",
     report_dir: str | Path = "./breakerbox_reports",
     report_to: str | None = None,
+    otel: bool = False,
 ) -> GuardedApp:
     return GuardedApp(
         app, budget_usd, max_hops, ttl_seconds, velocity_usd_per_min, on_trip,
-        sub_budgets, topup_policy, unknown_model, report_dir, report_to,
+        sub_budgets, topup_policy, unknown_model, report_dir, report_to, otel,
     )

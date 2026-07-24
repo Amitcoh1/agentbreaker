@@ -191,6 +191,15 @@ LiteLLM/Portkey/Kong-style gateways solve a different layer (org-wide per-key sp
 compose fine alongside this — the gateway caps the org, Breakerbox governs one workflow's
 internal structure.
 
+**Behind a gateway (LiteLLM / Portkey):** point your model at the gateway's base URL and wrap the
+compiled app in `guard()`. Metering is a LangChain callback, not a network hook, so it composes
+with any OpenAI-compatible proxy with no extra wiring:
+
+```python
+model = ChatOpenAI(model="openai/gpt-4o", base_url="http://localhost:4000", api_key="sk-litellm-…")
+app = guard(compiled_app, budget_usd=5.00)  # gateway routes + holds the key; guard budgets the run
+```
+
 **The catch most gateway users miss:** a key limit has to sit high enough not to block real work,
 so a single runaway run can burn **$180 while still *under* a $500 ceiling** — the key never fires
 until the damage is already account-wide, and then it 429s everyone. Breakerbox trips that one run

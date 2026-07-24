@@ -1,7 +1,7 @@
 """Live-control demo: stream a guarded runaway to the cloud dashboard, then (optionally)
 kill it from the control endpoint — the exact call the dashboard's Kill button makes.
 
-    export AGENTBREAKER_INGEST_KEY=<INGEST_KEY>          # library -> ingest/control auth
+    export BREAKERBOX_INGEST_KEY=<INGEST_KEY>          # library -> ingest/control auth
     python live_demo.py \
         --ingest-url  https://<REF>.functions.supabase.co/ingest \
         --control-url https://<REF>.functions.supabase.co/control \
@@ -26,7 +26,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langgraph.graph import END, START, StateGraph
 
-from agentbreaker import BudgetKilled, BudgetPaused, guard
+from breakerbox import BudgetKilled, BudgetPaused, guard
 
 
 class SlowModel(BaseChatModel):
@@ -93,7 +93,7 @@ def main() -> None:
     args = ap.parse_args()
 
     if args.control_url:
-        os.environ["AGENTBREAKER_CONTROL_URL"] = args.control_url
+        os.environ["BREAKERBOX_CONTROL_URL"] = args.control_url
 
     app = guard(
         build(args.loops),

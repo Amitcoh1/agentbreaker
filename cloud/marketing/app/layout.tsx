@@ -27,7 +27,7 @@ const description =
   "A hard dollar budget on the workflow itself — hierarchical across sub-agents, enforced between steps, never a mid-flight 429. The open-source circuit breaker for AI agents. No server execution, no stored keys.";
 
 export const metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://agentbreaker-cyan.vercel.app"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://breakerbox-cyan.vercel.app"),
   title,
   description,
   icons: { icon: "/favicon.svg" },

@@ -27,7 +27,7 @@ Both resolve to your account, and the API returns only your runs.
 ## List your runs
 
 ```bash
-curl -H "x-ingest-key: $AGENTBREAKER_INGEST_KEY" \
+curl -H "x-ingest-key: $BREAKERBOX_INGEST_KEY" \
   "https://YOUR_PROJECT_REF.functions.supabase.co/runs-api?limit=50"
 ```
 
@@ -52,7 +52,7 @@ Query params: `limit` (default `50`, max `200`).
 ## Get one run (the receipt)
 
 ```bash
-curl -H "x-ingest-key: $AGENTBREAKER_INGEST_KEY" \
+curl -H "x-ingest-key: $BREAKERBOX_INGEST_KEY" \
   "https://YOUR_PROJECT_REF.functions.supabase.co/runs-api?run_id=RUN_ID"
 ```
 

@@ -52,7 +52,7 @@ function prompt(node: SpecNode, description: string): string {
         : `a ${node.type} step`;
   return [
     `You are writing the Python body of one node in a LangGraph workflow guarded by the`,
-    `\`agentbreaker\` library. This node is ${what}, named \`${node.id}\`.`,
+    `\`breakerbox\` library. This node is ${what}, named \`${node.id}\`.`,
     description ? `The step should: ${description}` : `Infer a sensible behavior from the node's name and type.`,
     ``,
     `Return ONLY the body of \`def ${node.id}(state: dict) -> dict:\` — no function signature,`,

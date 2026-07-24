@@ -15,7 +15,7 @@ We aim to acknowledge within a few days and to coordinate a fix and disclosure t
 ## Supported versions
 
 Breakerbox is pre-1.0; security fixes land on the latest released version on PyPI. Please reproduce
-against the latest `agentbreaker` before reporting.
+against the latest `breakerbox` before reporting.
 
 ## Design guarantees (the security model)
 

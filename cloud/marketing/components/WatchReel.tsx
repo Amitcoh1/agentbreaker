@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 
-// Opens the self-scored reel (public/reel/reel.html) in a lightbox. Click the frame once to start
-// (browsers gate its audio until the first interaction — the reel has a click-to-play gate).
+// Opens the recorded reel (public/reel/reel.mp4) in a lightbox with native controls — works on
+// desktop and mobile (playsInline). The user hits play, so audio is never gated.
 export default function WatchReel() {
   const [open, setOpen] = useState(false);
 
@@ -18,19 +18,9 @@ export default function WatchReel() {
     };
   }, [open]);
 
-  // iOS Safari won't play the reel's audio inside an iframe (the play gesture must be on the
-  // top-level page), so on touch devices open it full-page in a new tab; desktop keeps the lightbox.
-  const openReel = () => {
-    if (window.matchMedia("(pointer: coarse)").matches) {
-      window.open("/reel/reel.html", "_blank", "noopener,noreferrer");
-    } else {
-      setOpen(true);
-    }
-  };
-
   return (
     <>
-      <button type="button" className="reel-cta" onClick={openReel}>
+      <button type="button" className="reel-cta" onClick={() => setOpen(true)}>
         <span className="reel-cta-play" aria-hidden="true">▶</span> Watch the reel
       </button>
       {open && (
@@ -45,7 +35,14 @@ export default function WatchReel() {
             <button className="reel-close" onClick={() => setOpen(false)} aria-label="Close reel">
               ✕
             </button>
-            <iframe src="/reel/reel.html" title="Breakerbox reel" allow="autoplay; fullscreen" />
+            <video
+              className="reel-video"
+              src="/reel/reel.mp4"
+              poster="/reel/reel-poster.jpg"
+              controls
+              playsInline
+              preload="metadata"
+            />
           </div>
         </div>
       )}

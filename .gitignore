@@ -10,6 +10,7 @@ venv/
 .ruff_cache/
 .hypothesis/
 breakerbox_reports/
+agentbreaker_reports/
 examples/runaway_demo/reports/
 *.html
 !src/breakerbox/report/*.html.j2
@@ -23,3 +24,7 @@ cloud/.secrets.local
 # supabase CLI temp
 cloud/supabase/.temp/
 **/.temp/
+.vercel
+
+# session handover is a local, per-session snapshot — keep it out of the public repo
+HANDOVER.md

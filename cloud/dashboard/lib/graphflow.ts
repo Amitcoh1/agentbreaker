@@ -98,3 +98,17 @@ export function newNode(type: SpecNode["type"], existing: Set<string>): SpecNode
   if (type === "router") return { ...base, condition: "route" };
   return base;
 }
+
+// Whether a proposed edge is allowed. Nothing flows into a start or out of an end; no self-loops;
+// no duplicate edges. Cycles between other nodes ARE allowed — that's how loops are built.
+export function canConnect(
+  source: SpecNode | undefined,
+  target: SpecNode | undefined,
+  edges: Pick<SpecEdge, "source" | "target">[],
+): boolean {
+  if (!source || !target) return false;
+  if (source.id === target.id) return false;
+  if (target.type === "start") return false;
+  if (source.type === "end") return false;
+  return !edges.some((e) => e.source === source.id && e.target === target.id);
+}

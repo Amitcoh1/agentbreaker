@@ -28,7 +28,7 @@ import {
   toJson,
   validate,
 } from "@/lib/graphspec";
-import { type FlowNode, flowToSpec, newNode, nodeIssues, specToFlow } from "@/lib/graphflow";
+import { type FlowNode, canConnect, flowToSpec, newNode, nodeIssues, specToFlow } from "@/lib/graphflow";
 import { MODEL_NAMES } from "@/lib/pricing";
 import { DEFAULT_ASSUMPTIONS, forecast } from "@/lib/forecast";
 
@@ -104,6 +104,15 @@ export default function BuilderPage() {
     (c: Connection) =>
       setEdges((eds) => addEdge({ ...c, animated: true, style: { stroke: "#98a1ad" } }, eds)),
     [setEdges],
+  );
+  const isValidConnection = useCallback(
+    (c: Connection | Edge) =>
+      canConnect(
+        (spec.nodes ?? []).find((n) => n.id === c.source),
+        (spec.nodes ?? []).find((n) => n.id === c.target),
+        spec.edges ?? [],
+      ),
+    [spec],
   );
 
   const addNode = (type: SpecNode["type"]) => {
@@ -275,6 +284,7 @@ export default function BuilderPage() {
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
+              isValidConnection={isValidConnection}
               onNodesDelete={() => setSelNode(null)}
               onNodeClick={(_, n) => {
                 setSelNode(n.id);

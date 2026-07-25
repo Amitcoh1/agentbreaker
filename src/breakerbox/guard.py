@@ -29,6 +29,7 @@ from langchain_core.callbacks import BaseCallbackHandler
 from breakerbox.control import ControlPoller
 from breakerbox.events import EventLog
 from breakerbox.ledger import InsufficientBudget, Ledger, ReservationId
+from breakerbox.loopdetect import LoopDetector, make_detector
 from breakerbox.meter import (
     DEFAULT_MAX_OUTPUT_TOKENS,
     StreamMeter,
@@ -109,6 +110,7 @@ class _Run:
     sink: HttpEventSink | None = None
     control: ControlPoller | None = None
     remote_action: str | None = None  # "pause" | "kill" from the dashboard
+    loop: LoopDetector | None = None  # #82 semantic loop detector, when detect_loops is on
     calls: dict[str, _Call] = field(default_factory=dict)
     side_effect_fired: list[str] = field(default_factory=list)
     otel_run_span: object | None = None  # parent run span, when otel=True
@@ -146,6 +148,15 @@ def _response_text(response) -> str:
         return response.generations[0][0].text or ""
     except (AttributeError, IndexError, TypeError):
         return ""
+
+
+def _call_text(messages) -> str:
+    """The input of a hop as plain text (messages or prompts) — the loop-detector signature."""
+    parts = []
+    for m in messages:
+        c = getattr(m, "content", m)
+        parts.append(c if isinstance(c, str) else str(c))
+    return "\n".join(parts)
 
 
 class _BudgetHandler(BaseCallbackHandler):
@@ -199,6 +210,10 @@ class _BudgetHandler(BaseCallbackHandler):
     def _start_call(self, run_id, parent, messages, serialized, metadata, kwargs):
         self._gate()
         node = (metadata or {}).get("langgraph_node") or _ROOT
+        # Loop check runs before the reserve so a runaway trips without paying for the hop (#82).
+        if self._run.loop is not None and self._run.loop.observe(node, _call_text(messages)):
+            self._run.tripwire.trip(TripReason.LOOP)
+            self._trip(TripReason.LOOP)
         model = _model_name(serialized, metadata)
         tokens_in = count_message_tokens(messages, model)
         inv = kwargs.get("invocation_params") or {}
@@ -321,6 +336,7 @@ class GuardedApp:
         report_dir: str | Path,
         report_to: str | None,
         otel: bool,
+        detect_loops: bool | dict,
     ) -> None:
         if on_trip not in ("pause", "kill"):
             raise ValueError(f"on_trip must be pause|kill, got {on_trip!r}")
@@ -338,6 +354,9 @@ class GuardedApp:
             _to_micro(velocity_usd_per_min) if velocity_usd_per_min is not None else None
         )
         self.on_trip = on_trip
+        self.detect_loops = detect_loops
+        # fail fast on a bad loop config at guard()-time, not mid-run
+        make_detector(detect_loops)
         self.sub_budgets = sub_budgets or {}
         self.topup_policy = topup_policy
         self.prices = PriceTable.load(unknown_model=unknown_model)
@@ -459,7 +478,10 @@ class GuardedApp:
             control = ControlPoller(
                 self._control_url, run_id, key=os.getenv("BREAKERBOX_INGEST_KEY")
             )
-        run = _Run(run_id, ledger, tripwire, eventlog, sink=sink, control=control)
+        run = _Run(
+            run_id, ledger, tripwire, eventlog, sink=sink, control=control,
+            loop=make_detector(self.detect_loops),
+        )
         if self._otel is not None:
             run.otel_run_span = self._otel.start_run(run_id, self.budget_micro)
         run.handler = _BudgetHandler(self, run)
@@ -514,8 +536,10 @@ def guard(
     report_dir: str | Path = "./breakerbox_reports",
     report_to: str | None = None,
     otel: bool = False,
+    detect_loops: bool | dict = False,
 ) -> GuardedApp:
     return GuardedApp(
         app, budget_usd, max_hops, ttl_seconds, velocity_usd_per_min, on_trip,
         sub_budgets, topup_policy, unknown_model, report_dir, report_to, otel,
+        detect_loops,
     )

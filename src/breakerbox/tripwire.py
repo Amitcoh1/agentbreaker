@@ -24,6 +24,7 @@ class TripReason(StrEnum):
     TTL = "ttl"
     VELOCITY = "velocity"
     REMOTE = "remote"  # pause/kill issued from the cloud dashboard
+    LOOP = "loop"  # near-identical repeat loop caught before the budget (#82)
 
 
 class Tripwire:

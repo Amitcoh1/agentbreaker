@@ -16,6 +16,7 @@ from langgraph.graph import END, START, StateGraph
 
 from breakerbox import BudgetKilled, BudgetPaused, guard, mark_side_effecting
 from breakerbox.pricing import cost_microusd
+from breakerbox.tripwire import TripReason
 
 MODEL = "openai/gpt-4o"
 COST_PER_CALL = cost_microusd(MODEL, 100, 50)  # 750 microUSD
@@ -176,3 +177,24 @@ def test_side_effecting_tool_listed_on_kill(tmp_path):
 def test_pause_requires_checkpointer():
     with pytest.raises(ValueError, match="checkpointer"):
         guard(build(2), budget_usd=1.0, on_trip="pause")
+
+
+# --- #82 semantic loop detection --------------------------------------------
+def test_detect_loops_trips_before_budget(tmp_path):
+    # build(20) calls the model 20× with identical input at the same node — a textbook runaway.
+    guarded = guard(
+        build(20), budget_usd=100.0, max_hops=100, on_trip="kill",
+        detect_loops=True, report_dir=tmp_path,
+    )
+    with pytest.raises(BudgetKilled):
+        guarded.invoke({"count": 0}, {"recursion_limit": 100})
+    run = _only_run(guarded)
+    assert run.tripwire.reason is TripReason.LOOP  # loop, not budget/hops
+    assert run.tripwire.hops <= 5  # tripped early — nowhere near 20 loops or the $100 budget
+
+
+def test_loops_run_to_completion_when_detection_off(tmp_path):
+    # detect_loops defaults off → existing behaviour is unchanged (opt-in, non-breaking).
+    guarded = guard(build(5), budget_usd=100.0, max_hops=100, on_trip="kill", report_dir=tmp_path)
+    out = guarded.invoke({"count": 0}, {"recursion_limit": 100})
+    assert out["count"] == 5

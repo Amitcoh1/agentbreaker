@@ -112,3 +112,40 @@ export function canConnect(
   if (source.type === "end") return false;
   return !edges.some((e) => e.source === source.id && e.target === target.id);
 }
+
+// Clone a set of flow nodes (+ the edges internal to that set) with fresh, non-colliding ids and a
+// small offset — used by copy/paste and duplicate. Edges leaving the set are dropped. Pure.
+export function duplicateFlow(
+  nodes: FlowNode[],
+  edges: Edge[],
+  existing: Set<string>,
+  offset = 48,
+): { nodes: FlowNode[]; edges: Edge[] } {
+  const ex = new Set(existing);
+  const idMap = new Map<string, string>();
+  const newNodes = nodes.map((n) => {
+    const base = n.data.spec.id;
+    let nid = `${base}_copy`;
+    let i = 1;
+    while (ex.has(nid)) nid = `${base}_copy${++i}`;
+    ex.add(nid);
+    idMap.set(n.id, nid);
+    return {
+      ...n,
+      id: nid,
+      selected: true,
+      position: { x: n.position.x + offset, y: n.position.y + offset },
+      data: { spec: { ...n.data.spec, id: nid } },
+    };
+  });
+  const newEdges = edges
+    .filter((e) => idMap.has(e.source) && idMap.has(e.target))
+    .map((e) => ({
+      ...e,
+      id: `e-${idMap.get(e.source)}-${idMap.get(e.target)}`,
+      source: idMap.get(e.source)!,
+      target: idMap.get(e.target)!,
+      selected: true,
+    }));
+  return { nodes: newNodes, edges: newEdges };
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Background,
   type Connection,
@@ -28,7 +28,7 @@ import {
   toJson,
   validate,
 } from "@/lib/graphspec";
-import { type FlowNode, canConnect, flowToSpec, newNode, nodeIssues, specToFlow } from "@/lib/graphflow";
+import { type FlowNode, canConnect, duplicateFlow, flowToSpec, newNode, nodeIssues, specToFlow } from "@/lib/graphflow";
 import { MODEL_NAMES } from "@/lib/pricing";
 import { DEFAULT_ASSUMPTIONS, forecast } from "@/lib/forecast";
 
@@ -114,6 +114,49 @@ export default function BuilderPage() {
       ),
     [spec],
   );
+
+  // Editing table-stakes: ⌘/Ctrl + A select-all · C copy · V paste · D duplicate. Delete is
+  // handled by React Flow's deleteKeyCode; multi-select is Shift-drag / Shift-click.
+  const clipboard = useRef<{ nodes: FlowNode[]; edges: Edge[] } | null>(null);
+  useEffect(() => {
+    const selectedGraph = () => {
+      const sel = nodes.filter((n) => n.selected);
+      const ids = new Set(sel.map((n) => n.id));
+      return { nodes: sel, edges: edges.filter((e) => ids.has(e.source) && ids.has(e.target)) };
+    };
+    const paste = (src: { nodes: FlowNode[]; edges: Edge[] }) => {
+      if (!src.nodes.length) return;
+      const dup = duplicateFlow(src.nodes, src.edges, new Set(nodes.map((n) => n.id)));
+      setNodes((ns) => ns.map((n): FlowNode => ({ ...n, selected: false })).concat(dup.nodes));
+      setEdges((es) => es.concat(dup.edges));
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      const k = e.key.toLowerCase();
+      if (k === "a") {
+        e.preventDefault();
+        setNodes((ns) => ns.map((n) => ({ ...n, selected: true })));
+      } else if (k === "c") {
+        const g = selectedGraph();
+        if (g.nodes.length) clipboard.current = g;
+      } else if (k === "v") {
+        if (clipboard.current) {
+          e.preventDefault();
+          paste(clipboard.current);
+        }
+      } else if (k === "d") {
+        const g = selectedGraph();
+        if (g.nodes.length) {
+          e.preventDefault();
+          paste(g);
+        }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [nodes, edges, setNodes, setEdges]);
 
   const addNode = (type: SpecNode["type"]) => {
     const s = newNode(type, new Set(nodes.map((n) => n.id)));

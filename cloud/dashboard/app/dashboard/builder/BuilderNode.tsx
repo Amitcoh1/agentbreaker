@@ -5,7 +5,7 @@ import { Handle, type NodeProps, Position } from "@xyflow/react";
 import { Bot, Flag, GitBranch, Play, TriangleAlert, Wrench } from "lucide-react";
 import type { SpecNode } from "@/lib/graphspec";
 import { perCallUsd, usd } from "@/lib/pricing";
-import { NodeIssues } from "./context";
+import { NodeForecasts, NodeIssues } from "./context";
 
 const META = {
   start: { icon: Play, color: "text-good" },
@@ -20,6 +20,7 @@ export default function BuilderNode({ id, data, selected }: NodeProps) {
   const m = META[n.type];
   const Icon = m.icon;
   const issue = useContext(NodeIssues)[id];
+  const nf = useContext(NodeForecasts)[id];
   const cost = n.type === "model" ? perCallUsd(n.model, n.max_tokens) : null;
 
   return (
@@ -51,6 +52,15 @@ export default function BuilderNode({ id, data, selected }: NodeProps) {
         {n.type === "router" && <>{n.condition}</>}
         {(n.type === "start" || n.type === "end") && n.type}
       </div>
+      {n.type === "model" && nf?.knownModel && (
+        <div
+          className={`mt-0.5 text-[11px] ${nf.looped ? "" : "text-muted"}`}
+          style={nf.looped ? { color: "#b8860b" } : undefined}
+          title={nf.looped ? "in a loop — cost multiplied" : "expected run cost (p50–p95)"}
+        >
+          {nf.looped ? "↻ " : ""}run ≈ {usd(nf.p50)}–{usd(nf.p95)}
+        </div>
+      )}
       {n.type !== "end" && <Handle type="source" position={Position.Right} />}
     </div>
   );

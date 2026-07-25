@@ -18,7 +18,7 @@ import BuilderNode from "./BuilderNode";
 import Inspector from "./Inspector";
 import TemplatesMenu from "./TemplatesMenu";
 import Tour, { type TourStep } from "./Tour";
-import { NodeIssues } from "./context";
+import { NodeForecasts, NodeIssues } from "./context";
 import {
   EXAMPLE_SPEC,
   type GraphSpec,
@@ -30,6 +30,7 @@ import {
 } from "@/lib/graphspec";
 import { type FlowNode, flowToSpec, newNode, nodeIssues, specToFlow } from "@/lib/graphflow";
 import { MODEL_NAMES } from "@/lib/pricing";
+import { DEFAULT_ASSUMPTIONS, forecast } from "@/lib/forecast";
 
 const nodeTypes = { ab: BuilderNode };
 const STORAGE = "ab_builder_spec";
@@ -87,6 +88,16 @@ export default function BuilderPage() {
   const spec = useMemo(() => flowToSpec(nodes, edges, config), [nodes, edges, config]);
   const result = useMemo(() => validate(spec), [spec]);
   const issues = useMemo(() => nodeIssues(spec), [spec]);
+  const [loopIters, setLoopIters] = useState(3);
+  const assumptions = useMemo(
+    () => ({
+      ...DEFAULT_ASSUMPTIONS,
+      loopIterationsP50: loopIters,
+      loopIterationsP95: Math.max(8, Math.round((loopIters * 8) / 3)),
+    }),
+    [loopIters],
+  );
+  const fc = useMemo(() => forecast(spec, assumptions), [spec, assumptions]);
   const canExport = result.ok;
 
   const onConnect = useCallback(
@@ -256,6 +267,7 @@ export default function BuilderPage() {
 
         <div className="min-w-0 flex-1">
           <NodeIssues.Provider value={issues}>
+          <NodeForecasts.Provider value={fc.perNode}>
             <ReactFlow
               nodes={nodes}
               edges={edges}
@@ -285,11 +297,12 @@ export default function BuilderPage() {
               <Controls showInteractive={false} />
               <MiniMap pannable className="!bg-surface" nodeColor={() => "#98a1ad"} />
             </ReactFlow>
+          </NodeForecasts.Provider>
           </NodeIssues.Provider>
         </div>
 
         <div data-tour="budget" className="w-80 shrink-0 space-y-3 overflow-y-auto border-l border-border p-3">
-          <BudgetTree spec={spec} />
+          <BudgetTree spec={spec} forecast={fc} loopIters={loopIters} onLoopIters={setLoopIters} />
           <GuardConfig
             config={config ?? {}}
             onChange={(patch) => setConfig((c) => ({ ...c, ...patch }))}

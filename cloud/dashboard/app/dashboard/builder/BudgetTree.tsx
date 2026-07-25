@@ -2,17 +2,26 @@
 
 import type { GraphSpec } from "@/lib/graphspec";
 import { perCallUsd, usd } from "@/lib/pricing";
-import { forecast } from "@/lib/forecast";
+import type { Forecast } from "@/lib/forecast";
 
 // The signature panel: root budget -> per-node allocations -> unallocated remainder, now with
 // live cost estimates from the price table (this is the budget-first differentiator).
-export default function BudgetTree({ spec }: { spec: GraphSpec }) {
+export default function BudgetTree({
+  spec,
+  forecast: fc,
+  loopIters,
+  onLoopIters,
+}: {
+  spec: GraphSpec;
+  forecast: Forecast;
+  loopIters: number;
+  onLoopIters: (n: number) => void;
+}) {
   const budget = spec.config?.budget_usd ?? 0;
   const models = (spec.nodes ?? []).filter((n) => n.type === "model");
   const allocated = models.reduce((a, n) => a + (n.sub_budget_usd ?? 0), 0);
   const remaining = budget - allocated;
   const over = remaining < -1e-9;
-  const fc = forecast(spec);
   const overForecast = fc.reachable && budget > 0 && fc.totalP95 > budget;
   const pct = (v: number) => (budget > 0 ? Math.min(100, Math.max(0, (v / budget) * 100)) : 0);
 
@@ -88,8 +97,21 @@ export default function BudgetTree({ spec }: { spec: GraphSpec }) {
               {fc.unknownModels.length} node(s) excluded (unpriced model).
             </div>
           )}
+          <div className="mt-2 flex items-center gap-2 text-[11px] text-muted">
+            <span className="whitespace-nowrap">loops ≈ {loopIters}×</span>
+            <input
+              type="range"
+              min={1}
+              max={12}
+              value={loopIters}
+              onChange={(e) => onLoopIters(Number(e.target.value))}
+              className="w-full accent-primary"
+              aria-label="assumed loop iterations"
+            />
+          </div>
           <div className="mt-1 text-[11px] leading-snug text-muted">
-            Typical (p50) → bad-case (p95). Heuristic: loops ×3–8, output 60–100% of max_tokens.
+            Typical (p50) → bad-case (p95). Heuristic: loops ×{loopIters}–
+            {Math.max(8, Math.round((loopIters * 8) / 3))}, output 60–100% of max_tokens.
           </div>
         </div>
       )}

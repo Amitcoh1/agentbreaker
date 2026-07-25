@@ -62,12 +62,20 @@ function prompt(node: SpecNode, description: string): string {
   ].join("\n");
 }
 
-export async function suggestCode(
+// One browser-direct model call (BYO key). Returns the text plus real token usage — the live
+// dry-run needs the usage to price each hop from what actually happened, not an estimate. Same
+// key-handling contract as above: the key goes only to the provider (or your baseUrl), never to us.
+export interface ModelCall {
+  text: string;
+  tokensIn: number;
+  tokensOut: number;
+}
+
+export async function callModel(
   settings: AiSettings,
-  node: SpecNode,
-  description: string,
-): Promise<string> {
-  const body = prompt(node, description);
+  userContent: string,
+  maxTokens: number,
+): Promise<ModelCall> {
   if (settings.provider === "anthropic") {
     const res = await fetch((settings.baseUrl || "https://api.anthropic.com") + "/v1/messages", {
       method: "POST",
@@ -79,13 +87,17 @@ export async function suggestCode(
       },
       body: JSON.stringify({
         model: settings.model,
-        max_tokens: 1024,
-        messages: [{ role: "user", content: body }],
+        max_tokens: maxTokens,
+        messages: [{ role: "user", content: userContent }],
       }),
     });
     if (!res.ok) throw new Error(`Anthropic ${res.status}: ${(await res.text()).slice(0, 200)}`);
     const data = await res.json();
-    return stripCodeFences(data?.content?.[0]?.text ?? "");
+    return {
+      text: data?.content?.[0]?.text ?? "",
+      tokensIn: data?.usage?.input_tokens ?? 0,
+      tokensOut: data?.usage?.output_tokens ?? 0,
+    };
   }
   // OpenAI-compatible (requires a CORS-enabled base URL in the browser)
   const res = await fetch((settings.baseUrl || "https://api.openai.com/v1") + "/chat/completions", {
@@ -93,11 +105,24 @@ export async function suggestCode(
     headers: { "content-type": "application/json", authorization: `Bearer ${settings.apiKey}` },
     body: JSON.stringify({
       model: settings.model,
-      max_tokens: 1024,
-      messages: [{ role: "user", content: body }],
+      max_tokens: maxTokens,
+      messages: [{ role: "user", content: userContent }],
     }),
   });
   if (!res.ok) throw new Error(`OpenAI ${res.status}: ${(await res.text()).slice(0, 200)}`);
   const data = await res.json();
-  return stripCodeFences(data?.choices?.[0]?.message?.content ?? "");
+  return {
+    text: data?.choices?.[0]?.message?.content ?? "",
+    tokensIn: data?.usage?.prompt_tokens ?? 0,
+    tokensOut: data?.usage?.completion_tokens ?? 0,
+  };
+}
+
+export async function suggestCode(
+  settings: AiSettings,
+  node: SpecNode,
+  description: string,
+): Promise<string> {
+  const { text } = await callModel(settings, prompt(node, description), 1024);
+  return stripCodeFences(text);
 }

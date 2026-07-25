@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { simulate, routerOptions } from "./dryrun";
+import { simulate, simulateLive, routerOptions, type ModelResolve } from "./dryrun";
 import { perCallUsd, MODEL_NAMES } from "./pricing";
 import type { GraphSpec } from "./graphspec";
 
@@ -100,5 +100,56 @@ describe("simulate", () => {
     const r = simulate(g);
     expect(r.stop).toBe("budget");
     expect(r.trace).toHaveLength(0); // the crossing hop is blocked, not recorded
+  });
+});
+
+describe("simulateLive", () => {
+  // The live driver reuses the same walk; the only difference is real per-hop cost from `call`.
+  const twoModels = spec(
+    [
+      { id: "s", type: "start" },
+      model("a"),
+      model("b"),
+      { id: "e", type: "end" },
+    ],
+    [
+      { source: "s", target: "a" },
+      { source: "a", target: "b" },
+      { source: "b", target: "e" },
+    ],
+    { budget_usd: 5, max_hops: 50 },
+  );
+
+  it("uses the real per-hop cost the caller supplies, not an estimate", async () => {
+    const call = async (n: { id: string }): Promise<ModelResolve> => ({ usd: 0.25, note: `real:${n.id}` });
+    const r = await simulateLive(twoModels, {}, call);
+    expect(r.stop).toBe("end");
+    expect(r.totalUsd).toBeCloseTo(0.5); // 2 hops × $0.25 real, not the reserve estimate
+    expect(r.trace.every((h) => h.note?.startsWith("real:"))).toBe(true);
+  });
+
+  it("trips the budget on the real cost, before the crossing hop", async () => {
+    const call = async (): Promise<ModelResolve> => ({ usd: 4 }); // 2nd hop would cross $5
+    const r = await simulateLive(twoModels, {}, call);
+    expect(r.stop).toBe("budget");
+    expect(r.hops).toBe(1); // first hop taken, second blocked
+    expect(r.trace).toHaveLength(1);
+  });
+
+  it("still stubs tools in live mode (no call made for them)", async () => {
+    const g = spec(
+      [
+        { id: "s", type: "start" },
+        { id: "t", type: "tool", name: "publish", side_effecting: true },
+        { id: "e", type: "end" },
+      ],
+      [{ source: "s", target: "t" }, { source: "t", target: "e" }],
+    );
+    let calls = 0;
+    await simulateLive(g, {}, async () => {
+      calls++;
+      return { usd: 1 };
+    });
+    expect(calls).toBe(0); // tools never trigger a model call
   });
 });

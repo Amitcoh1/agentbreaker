@@ -20,5 +20,16 @@ export function perCallUsd(model: string | undefined, maxTokens: number | undefi
   return (INPUT_ASSUMPTION * r.in_per_mtok_usd + out) / 1_000_000;
 }
 
+/** Actual cost from measured token counts — used by the live dry-run (real input+output). */
+export function costUsd(
+  model: string | undefined,
+  tokensIn: number,
+  tokensOut: number,
+): number | null {
+  if (!model || !(model in MODELS)) return null;
+  const r = MODELS[model];
+  return (tokensIn * r.in_per_mtok_usd + tokensOut * r.out_per_mtok_usd) / 1_000_000;
+}
+
 export const usd = (n: number | null): string =>
   n == null ? "—" : Math.abs(n) >= 1 ? `$${n.toFixed(2)}` : `$${n.toFixed(4)}`;

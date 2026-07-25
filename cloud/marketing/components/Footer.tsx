@@ -24,6 +24,7 @@ const COLS: { title: string; links: { label: string; href: string }[] }[] = [
   {
     title: "Community",
     links: [
+      { label: "Contact", href: "#contact" },
       { label: "Discussions", href: LINKS.discussions },
       { label: "Issues", href: LINKS.issues },
       { label: "X / Twitter", href: LINKS.twitter },

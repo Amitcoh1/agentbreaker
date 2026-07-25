@@ -1,4 +1,5 @@
 import Compare from "@/components/Compare";
+import Contact from "@/components/Contact";
 import CostForecast from "@/components/CostForecast";
 import FinalCta from "@/components/FinalCta";
 import Footer from "@/components/Footer";
@@ -46,6 +47,7 @@ export default function MarketingPage() {
       <Stats />
       <Quote />
       <FinalCta />
+      <Contact />
       <Footer />
     </>
   );

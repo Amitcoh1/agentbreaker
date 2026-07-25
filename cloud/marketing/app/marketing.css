@@ -179,6 +179,20 @@ body:has(.mkt) { background: #0f1114; }
   line-height: 1;
 }
 .mkt .announce-x:hover { color: var(--tx); }
+/* Small entrance on a new version + a soft pulse on the "new" pill (#77). */
+@keyframes announce-in {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.mkt .announce-in { animation: announce-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@keyframes announce-pill-pulse {
+  0%, 100% { border-color: var(--line2); color: var(--tx2); }
+  50% { border-color: var(--brass); color: var(--brass); }
+}
+.mkt .announce-pill-pulse { animation: announce-pill-pulse 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .mkt .announce-in, .mkt .announce-pill-pulse { animation: none; }
+}
 @media (max-width: 640px) {
   .mkt .announce { font-size: 12.5px; padding: 8px 40px; }
   .mkt .announce-pill { display: none; }

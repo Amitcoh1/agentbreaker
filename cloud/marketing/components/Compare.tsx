@@ -6,6 +6,7 @@ const ROWS: { label: string; cells: [string, string][] }[] = [
   { label: "Hierarchical per-agent escrow", cells: [["flat session", "n"], ["—", "n"], ["✓", "yb"]] },
   { label: "Stop at hop boundary, resume from checkpoint", cells: [["429 mid-flight", "n"], ["—", "n"], ["✓", "yb"]] },
   { label: "Catches a runaway run under the org ceiling", cells: [["never fires", "n"], ["—", "n"], ["✓", "yb"]] },
+  { label: "Cost forecast before you run", cells: [["after the fact", "n"], ["after a run", "n"], ["✓ on the canvas", "yb"]] },
   { label: "Visual builder output", cells: [["n/a", "n"], ["hosted flows", "n"], ["plain Python", "yb"]] },
   { label: "Executes your code server-side", cells: [["n/a", "n"], ["yes", "y"], ["never", "yb"]] },
   { label: "Stores your provider keys", cells: [["yes (proxy)", "y"], ["yes", "y"], ["never", "yb"]] },

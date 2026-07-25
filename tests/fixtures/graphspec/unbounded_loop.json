@@ -1,0 +1,48 @@
+{
+  "version": "1",
+  "config": {
+    "budget_usd": 5.0,
+    "on_trip": "pause"
+  },
+  "nodes": [
+    {
+      "id": "start",
+      "type": "start"
+    },
+    {
+      "id": "agent",
+      "type": "model",
+      "model": "openai/gpt-4o",
+      "max_tokens": 1024
+    },
+    {
+      "id": "loop",
+      "type": "router",
+      "condition": "keep_going"
+    },
+    {
+      "id": "end",
+      "type": "end"
+    }
+  ],
+  "edges": [
+    {
+      "source": "start",
+      "target": "agent"
+    },
+    {
+      "source": "agent",
+      "target": "loop"
+    },
+    {
+      "source": "loop",
+      "target": "agent",
+      "condition": "again"
+    },
+    {
+      "source": "loop",
+      "target": "end",
+      "condition": "done"
+    }
+  ]
+}

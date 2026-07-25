@@ -4,10 +4,10 @@
 // is charged max_hops of the single costliest hop. No competitor can print this — a gateway only
 // knows cost after a request; a worst-case bound needs the whole graph topology at design time.
 //
-// Pure, no I/O. This powers the builder read-out now; emitting it into the generated Python (as a
-// comment + assert) is a separate, byte-parity-locked change.
+// Pure, no I/O. Powers the builder read-out; ceilingComment() (below) emits it into the generated
+// Python header, byte-parity-locked with src/breakerbox/ceiling.py.
 import type { GraphSpec } from "./graphspec";
-import { perCallUsd } from "./pricing";
+import { perCallUsd, usd } from "./pricing";
 
 export interface CostCeiling {
   /** USD upper bound over priced, reachable model nodes. null when a reachable loop has no max_hops
@@ -124,4 +124,44 @@ export function costCeiling(spec: GraphSpec): CostCeiling {
     basis: "dag-sum",
     budgetBinds: budgetBinds(sum),
   };
+}
+
+// Compact code-comment form of the ceiling, emitted into the generated Python header (#79).
+// MUST stay byte-identical to src/breakerbox/ceiling.py:ceiling_comment — keep in lockstep.
+const REPROVE = "#   Run `breakerbox ceiling <spec>.json` to re-prove at current prices.";
+
+export function ceilingComment(c: CostCeiling): string[] {
+  if (!c.bounded) {
+    if (c.basis === "empty") return []; // no start node — degenerate; say nothing
+    const stops =
+      c.budgetUsd != null
+        ? `only budget_usd=${usd(c.budgetUsd)} stops it`
+        : "and no budget_usd is set — this run has no cap";
+    return [
+      `# ⚠ Cost ceiling: UNBOUNDED — a reachable loop has no max_hops; ${stops}.`,
+      "#   Set max_hops in the spec for a provable bound.",
+    ];
+  }
+  if (c.basis === "empty") {
+    if (c.unpricedModels.length) {
+      const n = c.unpricedModels.length;
+      return [`# Cost ceiling: not priced — ${n} reachable model step(s) use unpriced models.`];
+    }
+    return ["# Cost ceiling: ≤ $0.00 (no priced model steps)."];
+  }
+  const ceil = usd(c.ceiling);
+  let head: string;
+  if (c.basis === "hops-cap") {
+    const hop = usd(c.costliestHopUsd);
+    head = `# Cost ceiling: ≤ ${ceil} (proven, ${c.maxHops} hops × ${hop}) — bounded by max_hops=${c.maxHops}.`;
+  } else {
+    head = `# Cost ceiling: ≤ ${ceil} (proven, every reachable step at full max_tokens, no loops).`;
+  }
+  const lines = [head];
+  if (c.unpricedModels.length) {
+    const n = c.unpricedModels.length;
+    lines.push(`#   (+ ${n} unpriced step(s) — the true ceiling is higher.)`);
+  }
+  lines.push(REPROVE);
+  return lines;
 }

@@ -46,9 +46,19 @@ def test_router_becomes_conditional_edges_with_side_effect_comments():
 
 
 # --- golden fixtures: the contract the Phase D TS mirror must match ----------
-@pytest.mark.parametrize("name", ["linear", "router_cycle", "with_code", "side_effects"])
+@pytest.mark.parametrize(
+    "name", ["linear", "router_cycle", "with_code", "side_effects", "unbounded_loop"]
+)
 def test_codegen_matches_golden(name):
     assert codegen.generate(_spec(name)) == (FX / f"{name}.py").read_text()
+
+
+def test_ceiling_comment_emitted_per_basis():
+    # #79: the header carries the provable ceiling. Cover each basis + the unbounded warning.
+    assert "# Cost ceiling: ≤ $1.69 (proven, 50 hops × " in codegen.generate(_spec("router_cycle"))
+    assert "every reachable step at full max_tokens, no loops" in codegen.generate(_spec("linear"))
+    unb = codegen.generate(_spec("unbounded_loop"))
+    assert "⚠ Cost ceiling: UNBOUNDED" in unb and "Set max_hops" in unb
 
 
 @pytest.mark.parametrize("name", ["over_allocation", "side_effect_bad"])

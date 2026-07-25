@@ -154,3 +154,49 @@ def format_ceiling(c: CostCeiling) -> str:
         n = len(c.unpriced_models)
         lines.append(f"  {n} unpriced node(s) excluded ({names}) — true ceiling is higher.")
     return "\n".join(lines)
+
+
+# Compact code-comment form of the ceiling, emitted into the generated Python header (#79).
+# MUST stay byte-identical to cloud/dashboard/lib/costCeiling.ts:ceilingComment — keep in lockstep.
+_REPROVE = "#   Run `breakerbox ceiling <spec>.json` to re-prove at current prices."
+
+
+def ceiling_comment(c: CostCeiling) -> list[str]:
+    """Header comment lines (each already prefixed with `#`). Empty list = emit nothing."""
+    if not c.bounded:
+        if c.basis == "empty":  # no start node — degenerate; say nothing
+            return []
+        if c.budget_usd is not None:
+            stops = f"only budget_usd={_fmt_usd(c.budget_usd)} stops it"
+        else:
+            stops = "and no budget_usd is set — this run has no cap"
+        return [
+            f"# ⚠ Cost ceiling: UNBOUNDED — a reachable loop has no max_hops; {stops}.",
+            "#   Set max_hops in the spec for a provable bound.",
+        ]
+    if c.basis == "empty":
+        if c.unpriced_models:
+            n = len(c.unpriced_models)
+            return [
+                f"# Cost ceiling: not priced — {n} reachable "
+                "model step(s) use unpriced models."
+            ]
+        return ["# Cost ceiling: ≤ $0.00 (no priced model steps)."]
+    ceil = _fmt_usd(c.ceiling_usd)
+    if c.basis == "hops-cap":
+        hop = _fmt_usd(c.costliest_hop_usd)
+        head = (
+            f"# Cost ceiling: ≤ {ceil} (proven, {c.max_hops} hops × {hop}) "
+            f"— bounded by max_hops={c.max_hops}."
+        )
+    else:  # dag-sum
+        head = (
+            f"# Cost ceiling: ≤ {ceil} (proven, every reachable step "
+            "at full max_tokens, no loops)."
+        )
+    lines = [head]
+    if c.unpriced_models:
+        n = len(c.unpriced_models)
+        lines.append(f"#   (+ {n} unpriced step(s) — the true ceiling is higher.)")
+    lines.append(_REPROVE)
+    return lines

@@ -36,6 +36,16 @@ const nodeTypes = { ab: BuilderNode };
 const STORAGE = "ab_builder_spec";
 const initial = specToFlow(EXAMPLE_SPEC);
 
+// A point-in-time graph snapshot for undo/redo. snapKey is a dedup fingerprint — positions are
+// rounded so sub-pixel drag jitter doesn't spam the history.
+type Snap = { nodes: FlowNode[]; edges: Edge[]; config: GraphSpec["config"] };
+const snapKey = (s: Snap) =>
+  JSON.stringify({
+    n: s.nodes.map((n) => [n.id, Math.round(n.position.x), Math.round(n.position.y), n.data.spec]),
+    e: s.edges.map((e) => [e.source, e.target]),
+    c: s.config,
+  });
+
 const TOUR: TourStep[] = [
   {
     selector: '[data-tour="palette"]',
@@ -84,6 +94,53 @@ export default function BuilderPage() {
       /* ignore malformed saved state */
     }
   }, [setNodes, setEdges]);
+
+  // Undo/redo: debounced snapshots of the graph. skipSnap suppresses the snapshot caused by a
+  // restore; lastKey dedups so nothing (incl. a settled drag) records twice.
+  const past = useRef<Snap[]>([]);
+  const future = useRef<Snap[]>([]);
+  const skipSnap = useRef(false);
+  const lastKey = useRef("");
+  useEffect(() => {
+    if (skipSnap.current) {
+      skipSnap.current = false;
+      return;
+    }
+    const t = setTimeout(() => {
+      const snap: Snap = { nodes, edges, config };
+      const key = snapKey(snap);
+      if (key === lastKey.current) return;
+      past.current.push(snap);
+      lastKey.current = key;
+      if (past.current.length > 100) past.current.shift();
+      future.current = [];
+    }, 350);
+    return () => clearTimeout(t);
+  }, [nodes, edges, config]);
+  const applySnap = useCallback(
+    (s: Snap) => {
+      skipSnap.current = true;
+      lastKey.current = snapKey(s);
+      setNodes(s.nodes);
+      setEdges(s.edges);
+      setConfig(s.config);
+      setSelNode(null);
+      setSelEdge(null);
+    },
+    [setNodes, setEdges],
+  );
+  const undo = useCallback(() => {
+    if (past.current.length < 2) return;
+    future.current.push(past.current.pop()!);
+    applySnap(past.current[past.current.length - 1]);
+  }, [applySnap]);
+  const redo = useCallback(() => {
+    const next = future.current.pop();
+    if (next) {
+      past.current.push(next);
+      applySnap(next);
+    }
+  }, [applySnap]);
 
   const spec = useMemo(() => flowToSpec(nodes, edges, config), [nodes, edges, config]);
   const result = useMemo(() => validate(spec), [spec]);
@@ -152,11 +209,18 @@ export default function BuilderPage() {
           e.preventDefault();
           paste(g);
         }
+      } else if (k === "z") {
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+      } else if (k === "y") {
+        e.preventDefault();
+        redo();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [nodes, edges, setNodes, setEdges]);
+  }, [nodes, edges, setNodes, setEdges, undo, redo]);
 
   const addNode = (type: SpecNode["type"]) => {
     const s = newNode(type, new Set(nodes.map((n) => n.id)));

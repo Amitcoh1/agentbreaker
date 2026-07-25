@@ -9,6 +9,7 @@
 // Secrets: INGEST_KEY, CONTROL_KEY, SERVICE_ROLE_KEY, PROJECT_URL
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { allow, clientIp } from "../_shared/throttle.ts";
 
 const PROJECT_URL = Deno.env.get("PROJECT_URL") ?? Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY =
@@ -75,6 +76,11 @@ Deno.serve(async (req) => {
 
   // Dashboard issues a command: the authenticated owner of the run, or a legacy control key.
   if (req.method === "POST") {
+    // Throttle the write path per IP — it runs auth.getUser + inserts, and a human clicking
+    // pause/kill is nowhere near this. (The GET poll is exempt: it's the trusted, high-frequency
+    // library path, already authenticated by the shared key before any query.)
+    if (!allow(`control:${clientIp(req)}`)) return json({ error: "rate limited" }, 429);
+
     let body: { run_id?: string; command?: string };
     try {
       body = await req.json();

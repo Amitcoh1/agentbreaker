@@ -8,6 +8,7 @@
 // Secrets: supabase secrets set INGEST_KEY=... SERVICE_ROLE_KEY=... PROJECT_URL=...
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { allow, clientIp } from "../_shared/throttle.ts";
 
 const PROJECT_URL = Deno.env.get("PROJECT_URL") ?? Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY =
@@ -39,6 +40,11 @@ const MAX_BODY_BYTES = 5_000_000;
 const MAX_EVENTS = 5000;
 const MAX_DETAIL_BYTES = 16_384;
 
+// Personal ingest keys are `abk_` + 24 random bytes as hex (see IngestKeys.tsx). Validating the shape
+// BEFORE hashing means a garbage key never triggers the api_keys lookup — this is what closes the
+// unauthenticated DB-amplification: an attacker spraying random keys gets a flat 401, no DB work.
+const PERSONAL_KEY = /^abk_[0-9a-f]{48}$/;
+
 // Keep a single oversized event from bloating the DB; the stream stays intact.
 function clampDetail(d: unknown): unknown {
   if (d == null) return {};
@@ -59,11 +65,17 @@ Deno.serve(async (req) => {
     return new Response("payload too large", { status: 413 });
   }
 
+  // Per-instance flood guard, keyed by client IP. Generous so a busy sink never trips it.
+  if (!allow(`ingest:${clientIp(req)}`)) {
+    return new Response("rate limited", { status: 429, headers: { "retry-after": "1" } });
+  }
+
   // Resolve the run owner from the ingest key: a personal key (stored hashed in api_keys) maps to a
-  // user; the legacy shared INGEST_KEY ingests anonymous public runs (owner null); else 401.
+  // user; the legacy shared INGEST_KEY ingests anonymous public runs (owner null); else 401. Only a
+  // shape-valid personal key touches the DB (see PERSONAL_KEY) — junk keys short-circuit to 401.
   const presentedKey = req.headers.get("x-ingest-key") ?? "";
   let ownerId: string | null = null;
-  if (presentedKey) {
+  if (PERSONAL_KEY.test(presentedKey)) {
     const keyHash = await sha256Hex(presentedKey);
     const { data: keyRow } = await supabase
       .from("api_keys")

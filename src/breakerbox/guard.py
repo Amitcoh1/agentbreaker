@@ -18,6 +18,7 @@ Trip actions:
 from __future__ import annotations
 
 import os
+import sys
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -195,6 +196,25 @@ class _BudgetHandler(BaseCallbackHandler):
         )
         raise _Trip(reason)
 
+    def _emit_live(self) -> None:
+        """#83: a live $-spent / budget line (or callback) after each hop reconciles. No server."""
+        live = self._g.live
+        if not live:
+            return
+        spent = self._run.ledger.total_spent() / 1_000_000
+        budget = self._g.budget_micro / 1_000_000
+        hops = self._run.tripwire.hops
+        if callable(live):
+            live({"spent_usd": spent, "budget_usd": budget, "hops": hops})
+            return
+        pct = f"{spent / budget * 100:.0f}%" if budget else "—"
+        hop_word = "hop" if hops == 1 else "hops"
+        line = f"[breakerbox] ${spent:.4f} / ${budget:.2f} ({pct}) · {hops} {hop_word}"
+        if sys.stderr.isatty():
+            print(f"\r{line}\033[K", end="", file=sys.stderr, flush=True)
+        else:
+            print(line, file=sys.stderr, flush=True)
+
     # ---- model calls ----
     def on_chat_model_start(self, serialized, messages, *, run_id, parent_run_id=None,
                             tags=None, metadata=None, **kwargs):
@@ -281,6 +301,7 @@ class _BudgetHandler(BaseCallbackHandler):
             tokens_out=final_out, estimate_microusd=call.estimate, actual_microusd=actual,
             cumulative_microusd=led.total_spent(), detail=detail,
         )
+        self._emit_live()
         if call.span is not None:
             self._g._otel.end_hop(call.span, final_in, final_out, actual)
         # soft check: velocity/budget crossed -> mark tripped, enforced at NEXT gate
@@ -337,6 +358,7 @@ class GuardedApp:
         report_to: str | None,
         otel: bool,
         detect_loops: bool | dict,
+        live: bool | Callable,
     ) -> None:
         if on_trip not in ("pause", "kill"):
             raise ValueError(f"on_trip must be pause|kill, got {on_trip!r}")
@@ -355,6 +377,7 @@ class GuardedApp:
         )
         self.on_trip = on_trip
         self.detect_loops = detect_loops
+        self.live = live
         # fail fast on a bad loop config at guard()-time, not mid-run
         make_detector(detect_loops)
         self.sub_budgets = sub_budgets or {}
@@ -425,6 +448,8 @@ class GuardedApp:
         self.last_report_path = html_path
         if run.sink is not None:
             run.sink.finish(summary)
+        if self.live and not callable(self.live) and sys.stderr.isatty():
+            print(file=sys.stderr)  # end the in-place live line before the receipt
         print(render_terminal(summary))
         return html_path
 
@@ -537,9 +562,10 @@ def guard(
     report_to: str | None = None,
     otel: bool = False,
     detect_loops: bool | dict = False,
+    live: bool | Callable = False,
 ) -> GuardedApp:
     return GuardedApp(
         app, budget_usd, max_hops, ttl_seconds, velocity_usd_per_min, on_trip,
         sub_budgets, topup_policy, unknown_model, report_dir, report_to, otel,
-        detect_loops,
+        detect_loops, live,
     )

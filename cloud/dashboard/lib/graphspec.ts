@@ -4,6 +4,7 @@
 // the Python itself. Number formatting is field-aware (JSON/JS can't tell 5.0 from 5).
 
 export type NodeType = "start" | "end" | "model" | "tool" | "router";
+export type SideEffectClass = "read" | "network" | "write" | "destructive";
 
 export interface SpecNode {
   id: string;
@@ -13,6 +14,7 @@ export interface SpecNode {
   sub_budget_usd?: number;
   name?: string;
   side_effecting?: boolean;
+  side_effect_class?: SideEffectClass;
   condition?: string;
   code?: string;
   [k: string]: unknown;
@@ -51,9 +53,12 @@ const NODE_FIELDS: Record<string, string[]> = {
   start: [],
   end: [],
   model: ["model", "max_tokens", "sub_budget_usd", "code"],
-  tool: ["name", "side_effecting", "code"],
+  tool: ["name", "side_effecting", "side_effect_class", "code"],
   router: ["condition", "code"],
 };
+// A tool's blast radius, coarsest-first. `destructive` is the one codegen acts on: it wires a
+// human-approval gate (interrupt_before) into the compiled graph. `read` means no side effect.
+const SIDE_EFFECT_CLASSES = ["read", "network", "write", "destructive"];
 const CONFIG_FIELDS = ["budget_usd", "max_hops", "ttl_seconds", "velocity_usd_per_min", "on_trip"];
 const EDGE_FIELDS = ["source", "target", "condition"];
 const TOP_FIELDS = ["version", "config", "nodes", "edges"];
@@ -185,6 +190,9 @@ function validateNodes(nodes: SpecNode[], errors: string[], warnings: string[]):
       if (!n.name) errors.push(`Tool node '${nid}' needs a 'name'.`);
       if (n.side_effecting !== undefined && typeof n.side_effecting !== "boolean") {
         errors.push(`Tool node '${nid}' side_effecting must be true or false.`);
+      }
+      if (n.side_effect_class !== undefined && !SIDE_EFFECT_CLASSES.includes(n.side_effect_class)) {
+        errors.push(`Tool node '${nid}' side_effect_class must be one of ${pylist(SIDE_EFFECT_CLASSES)}.`);
       }
     }
   });
@@ -383,17 +391,16 @@ export function generate(spec: GraphSpec): string {
         "",
       );
     } else if (n.type === "tool") {
-      const se = n.side_effecting ? "True" : "False";
+      const sec = n.side_effect_class;
+      // side_effect_class is the source of truth when set (read = safe); else the boolean.
+      const se = (sec ? sec !== "read" : !!n.side_effecting) ? "True" : "False";
+      let comment = `# tool: ${n.name} · side_effecting=${se}`;
+      if (sec) comment += ` · class=${sec}`;
       const body = codeBody(n.code) ?? [
         `    # TODO: run the ${n.name} tool and update state`,
         "    return state",
       ];
-      lines.push(
-        "",
-        `def ${fn}(state):  # tool: ${n.name} · side_effecting=${se}`,
-        ...body,
-        "",
-      );
+      lines.push("", `def ${fn}(state):  ${comment}`, ...body, "");
     } else if (n.type === "router") {
       const labels = edges.filter((e) => e.source === n.id).map((e) => e.condition);
       const def = labels.length ? fmtStr(String(labels[0])) : '"pass"';
@@ -448,10 +455,25 @@ export function generate(spec: GraphSpec): string {
     kw.push(`    sub_budgets={${items}},`);
   }
 
+  // Destructive tools get a human-approval gate baked into the compiled graph: LangGraph pauses
+  // before those nodes so a person must resume. Safety made static — visible in the code you own.
+  const destructive = nodes
+    .filter((n) => n.type === "tool" && n.side_effect_class === "destructive")
+    .map((n) => n.id);
+  const compileLine = destructive.length
+    ? `    builder.compile(checkpointer=MemorySaver(), interrupt_before=[${destructive
+        .map((i) => `"${i}"`)
+        .join(", ")}]),`
+    : "    builder.compile(checkpointer=MemorySaver()),";
+  const approvalNote = destructive.length
+    ? ["# Destructive tools pause for human approval before running (interrupt_before)."]
+    : [];
+
   lines.push(
     "",
+    ...approvalNote,
     "app = guard(",
-    "    builder.compile(checkpointer=MemorySaver()),",
+    compileLine,
     ...kw,
     ")",
     "",

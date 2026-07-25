@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Copy } from "lucide-react";
-import type { GraphSpec, SpecNode } from "@/lib/graphspec";
+import type { GraphSpec, SideEffectClass, SpecNode } from "@/lib/graphspec";
 import { isKnownModel, perCallUsd, usd } from "@/lib/pricing";
 import { forecast, type Forecast, type ForecastAssumptions } from "@/lib/forecast";
 import AiSuggest from "./AiSuggest";
@@ -22,12 +22,14 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 const numOrUndef = (v: string) => (v === "" ? undefined : Number(v));
 
+const SIDE_EFFECT_CLASSES: SideEffectClass[] = ["read", "network", "write", "destructive"];
+
 // What each node is for, and what its generated function body should do — so you know what to
 // write (or what to ask "Suggest code" for).
 const PURPOSE: Record<SpecNode["type"], string> = {
   start: "Entry point. The workflow begins here — no body, no cost.",
   model: "An LLM call. The body reads state, calls the model, and writes the reply back to state. This is where budget is spent — set a model, max_tokens, and a sub-budget.",
-  tool: "A tool/function call (search, DB, an API…). The body does the work and returns updated state. Tick side_effecting if it writes or sends anything, so a trip flags it.",
+  tool: "A tool/function call (search, DB, an API…). The body does the work and returns updated state. Set side_effect_class to its blast radius — read/network/write/destructive; destructive tools get a human-approval gate baked into the generated graph.",
   router: "A branch. The body inspects state and returns which labelled edge to take next (e.g. “retry” vs “done”).",
   end: "Exit point. The workflow finishes here — no body, no cost.",
 };
@@ -182,13 +184,35 @@ export default function Inspector({
               onChange={(e) => onChange({ name: e.target.value })}
             />
           </Field>
+          <Field label="side_effect_class (blast radius)">
+            <select
+              className={INPUT}
+              value={node.side_effect_class ?? ""}
+              onChange={(e) =>
+                onChange({ side_effect_class: (e.target.value || undefined) as SideEffectClass | undefined })
+              }
+            >
+              <option value="">— unset —</option>
+              {SIDE_EFFECT_CLASSES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </Field>
+          {node.side_effect_class === "destructive" && (
+            <p className="text-xs text-brass">
+              Destructive → the generated graph pauses for human approval (interrupt_before) before this node.
+            </p>
+          )}
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
-              checked={!!node.side_effecting}
+              checked={node.side_effect_class ? node.side_effect_class !== "read" : !!node.side_effecting}
+              disabled={!!node.side_effect_class}
               onChange={(e) => onChange({ side_effecting: e.target.checked })}
             />
-            side_effecting
+            side_effecting{node.side_effect_class ? " (from class)" : ""}
           </label>
         </>
       )}

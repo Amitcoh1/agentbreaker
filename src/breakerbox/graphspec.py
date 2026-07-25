@@ -25,9 +25,12 @@ _NODE_FIELDS: dict[str, set[str]] = {
     "start": set(),
     "end": set(),
     "model": {"model", "max_tokens", "sub_budget_usd", "code"},
-    "tool": {"name", "side_effecting", "code"},
+    "tool": {"name", "side_effecting", "side_effect_class", "code"},
     "router": {"condition", "code"},
 }
+# A tool's blast radius, coarsest-first. `destructive` is the one codegen acts on: it wires a
+# human-approval gate (interrupt_before) into the compiled graph. `read` means no side effect.
+_SIDE_EFFECT_CLASSES = {"read", "network", "write", "destructive"}
 _CONFIG_FIELDS = {"budget_usd", "max_hops", "ttl_seconds", "velocity_usd_per_min", "on_trip"}
 _EDGE_FIELDS = {"source", "target", "condition"}
 _TOP_FIELDS = {"version", "config", "nodes", "edges"}
@@ -175,6 +178,12 @@ def _validate_nodes(nodes, r: ValidationResult) -> set[str]:
             se = n.get("side_effecting")
             if se is not None and not isinstance(se, bool):
                 r.errors.append(f"Tool node {nid!r} side_effecting must be true or false.")
+            sec = n.get("side_effect_class")
+            if sec is not None and sec not in _SIDE_EFFECT_CLASSES:
+                r.errors.append(
+                    f"Tool node {nid!r} side_effect_class must be one of "
+                    f"{sorted(_SIDE_EFFECT_CLASSES)}."
+                )
     if starts != 1:
         r.errors.append(f"A workflow needs exactly one 'start' node (found {starts}).")
     if ends < 1:

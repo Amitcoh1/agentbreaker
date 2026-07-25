@@ -9,15 +9,19 @@ const readSpec = (n: string) => JSON.parse(readFileSync(`${FX}${n}.json`, "utf8"
 const readText = (f: string) => readFileSync(`${FX}${f}`, "utf8");
 
 describe("TS mirror stays byte-identical to the Python golden fixtures", () => {
-  it.each(["linear", "router_cycle", "with_code"])("codegen(%s) matches the golden .py", (name) => {
-    expect(generate(readSpec(name))).toBe(readText(`${name}.py`));
-  });
+  it.each(["linear", "router_cycle", "with_code", "side_effects"])(
+    "codegen(%s) matches the golden .py",
+    (name) => {
+      expect(generate(readSpec(name))).toBe(readText(`${name}.py`));
+    },
+  );
 
-  it("validator messages match the golden error fixture", () => {
-    expect(validate(readSpec("over_allocation")).errors).toEqual(
-      JSON.parse(readText("over_allocation.errors.json")),
-    );
-  });
+  it.each(["over_allocation", "side_effect_bad"])(
+    "validator messages match the golden error fixture (%s)",
+    (name) => {
+      expect(validate(readSpec(name)).errors).toEqual(JSON.parse(readText(`${name}.errors.json`)));
+    },
+  );
 
   it("the bundled example validates with a cycle note and no errors", () => {
     const r = validate(EXAMPLE_SPEC);

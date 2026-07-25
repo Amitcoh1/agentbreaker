@@ -96,14 +96,20 @@ def generate(spec: dict) -> str:
                 "",
             ]
         elif t == "tool":
-            name, se = n.get("name"), bool(n.get("side_effecting"))
+            name = n.get("name")
+            sec = n.get("side_effect_class")
+            # side_effect_class is the source of truth when set (read = safe); else the boolean.
+            se = sec != "read" if sec else bool(n.get("side_effecting"))
+            comment = f"# tool: {name} · side_effecting={se}"
+            if sec:
+                comment += f" · class={sec}"
             body = _code_body(n.get("code")) or [
                 f"    # TODO: run the {name} tool and update state",
                 "    return state",
             ]
             lines += [
                 "",
-                f"def {fn}(state):  # tool: {name} · side_effecting={se}",
+                f"def {fn}(state):  {comment}",
                 *body,
                 "",
             ]
@@ -169,10 +175,27 @@ def generate(spec: dict) -> str:
         items = ", ".join(f'"{k}": {_money(v)}' for k, v in sub.items())
         kw.append(f"    sub_budgets={{{items}}},")
 
+    # Destructive tools get a human-approval gate baked into the compiled graph: LangGraph pauses
+    # before those nodes so a person must resume. Safety made static — visible in the code you own.
+    destructive = [
+        n["id"] for n in nodes
+        if n.get("type") == "tool" and n.get("side_effect_class") == "destructive"
+    ]
+    if destructive:
+        ids = ", ".join(f'"{i}"' for i in destructive)
+        compile_line = f"    builder.compile(checkpointer=MemorySaver(), interrupt_before=[{ids}]),"
+        approval_note = [
+            "# Destructive tools pause for human approval before running (interrupt_before)."
+        ]
+    else:
+        compile_line = "    builder.compile(checkpointer=MemorySaver()),"
+        approval_note = []
+
     lines += [
         "",
+        *approval_note,
         "app = guard(",
-        "    builder.compile(checkpointer=MemorySaver()),",
+        compile_line,
         *[line for line in kw if line],
         ")",
         "",

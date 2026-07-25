@@ -1,0 +1,19 @@
+{
+  "version": "1",
+  "config": { "budget_usd": 5.0, "max_hops": 20, "on_trip": "pause" },
+  "nodes": [
+    { "id": "start", "type": "start" },
+    { "id": "fetch", "type": "tool", "name": "read_docs", "side_effect_class": "read" },
+    { "id": "call_api", "type": "tool", "name": "call_api", "side_effect_class": "network" },
+    { "id": "save", "type": "tool", "name": "save_draft", "side_effect_class": "write" },
+    { "id": "delete", "type": "tool", "name": "delete_records", "side_effect_class": "destructive" },
+    { "id": "end", "type": "end" }
+  ],
+  "edges": [
+    { "source": "start", "target": "fetch" },
+    { "source": "fetch", "target": "call_api" },
+    { "source": "call_api", "target": "save" },
+    { "source": "save", "target": "delete" },
+    { "source": "delete", "target": "end" }
+  ]
+}

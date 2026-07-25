@@ -1,0 +1,3 @@
+[
+  "Tool node 'bad' side_effect_class must be one of ['destructive', 'network', 'read', 'write']."
+]

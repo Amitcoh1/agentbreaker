@@ -4,10 +4,18 @@
 // domain lands, set NEXT_PUBLIC_APP_URL and it overrides this interim Vercel URL.
 const APP = process.env.NEXT_PUBLIC_APP_URL ?? "https://agentbreaker-cyan.vercel.app";
 
+// The latest published version — drives the announcement bar. Bump on each release (matches the
+// pyproject version / the git tag). A new value re-shows the bar to everyone who dismissed the last.
+export const LATEST_VERSION = "0.5.0";
+
+// Where to reach a human — usage help via GitHub, collaboration via email.
+export const EMAIL = "amit.cellebrite@gmail.com";
+
 export const LINKS = {
   home: "/",
   privacy: "/privacy",
   github: "https://github.com/Amitcoh1/agentbreaker",
+  email: `mailto:${EMAIL}?subject=Breakerbox`,
   pypi: "https://pypi.org/project/breakerbox/",
   roadmap: "https://github.com/Amitcoh1/agentbreaker/blob/main/ROADMAP.md",
   changelog: "https://github.com/Amitcoh1/agentbreaker/releases",

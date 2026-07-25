@@ -3,6 +3,7 @@
 import type { GraphSpec } from "@/lib/graphspec";
 import { perCallUsd, usd } from "@/lib/pricing";
 import type { Forecast } from "@/lib/forecast";
+import { costCeiling } from "@/lib/costCeiling";
 
 // The signature panel: root budget -> per-node allocations -> unallocated remainder, now with
 // live cost estimates from the price table (this is the budget-first differentiator).
@@ -23,6 +24,7 @@ export default function BudgetTree({
   const remaining = budget - allocated;
   const over = remaining < -1e-9;
   const overForecast = fc.reachable && budget > 0 && fc.totalP95 > budget;
+  const ceiling = costCeiling(spec);
   const pct = (v: number) => (budget > 0 ? Math.min(100, Math.max(0, (v / budget) * 100)) : 0);
 
   return (
@@ -113,6 +115,45 @@ export default function BudgetTree({
             Typical (p50) → bad-case (p95). Heuristic: loops ×{loopIters}–
             {Math.max(8, Math.round((loopIters * 8) / 3))}, output 60–100% of max_tokens.
           </div>
+        </div>
+      )}
+      {models.length > 0 && (
+        <div className="mt-3 border-t border-border pt-3">
+          <div className="flex items-baseline justify-between text-sm">
+            <span className="font-semibold">
+              Ceiling <span className="font-normal text-muted">· proven</span>
+            </span>
+            <span className="num" style={!ceiling.bounded ? { color: "#b8860b" } : undefined}>
+              {ceiling.ceiling != null ? `≤ ${usd(ceiling.ceiling)}` : "unbounded"}
+            </span>
+          </div>
+          <div className="mt-1 text-[11px] leading-snug text-muted">
+            {!ceiling.bounded ? (
+              <>
+                A loop with no <b>max_hops</b> — only the ${budget.toFixed(2)} budget stops it. Set
+                max_hops for a provable ceiling.
+              </>
+            ) : ceiling.basis === "hops-cap" ? (
+              <>
+                Worst case: {ceiling.maxHops} hops × the costliest call ({usd(ceiling.costliestHopUsd)}
+                ), computed with no API calls.
+              </>
+            ) : ceiling.basis === "dag-sum" ? (
+              <>Worst case: every step at full max_tokens, no loops — computed with no API calls.</>
+            ) : (
+              <>No priced model cost on any reachable path.</>
+            )}
+          </div>
+          {ceiling.bounded && ceiling.budgetBinds && (
+            <div className="mt-1 text-[11px] text-muted">
+              The ${budget.toFixed(2)} budget is the binding cap — the guard trips before the ceiling.
+            </div>
+          )}
+          {ceiling.unpricedModels.length > 0 && (
+            <div className="mt-1 text-[11px] text-muted">
+              {ceiling.unpricedModels.length} unpriced node(s) excluded — the true ceiling is higher.
+            </div>
+          )}
         </div>
       )}
       <p className="mt-2 text-[11px] leading-snug text-muted">

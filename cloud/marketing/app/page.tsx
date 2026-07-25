@@ -1,4 +1,5 @@
 import Compare from "@/components/Compare";
+import CostForecast from "@/components/CostForecast";
 import FinalCta from "@/components/FinalCta";
 import Footer from "@/components/Footer";
 import Hero from "@/components/Hero";
@@ -38,6 +39,7 @@ export default function MarketingPage() {
       </main>
       <HowItWorks />
       <Pillars />
+      <CostForecast />
       <Integration />
       <Compare />
       <Manifesto />

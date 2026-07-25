@@ -151,6 +151,11 @@ export**. Hit **Generate** and you get the guarded Python above, ready to copy o
 Everything runs in your browser; the spec → Python codegen is shared with the `breakerbox
 build spec.json` CLI and locked to it by golden-fixture tests (Python and TS, enforced in CI).
 
+**Cost forecast (before you run).** The canvas forecasts a run's cost *while you design it* — a
+**p50–p95 band** per node and for the whole graph, with a what-if loop slider and a per-node model
+swap, all computed in the browser with no API calls. It's a labelled estimate and advisory-only:
+it never changes the generated Python. Most builders show cost after a run; this shows it first.
+
 **AI suggest (bring your own key).** Any model/tool/router node has an optional "Suggest code"
 helper: describe the step, and it drafts a Python body for you to copy in. It calls the model
 **directly from your browser with your own API key** — the key is stored only in your browser

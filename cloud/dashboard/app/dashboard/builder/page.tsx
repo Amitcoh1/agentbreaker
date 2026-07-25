@@ -311,6 +311,9 @@ export default function BuilderPage() {
             <Inspector
               key={selectedNode.id}
               node={selectedNode.data.spec}
+              spec={spec}
+              assumptions={assumptions}
+              forecast={fc}
               onChange={(p) => patchNode(selectedNode.id, p)}
               onRename={(id) => renameNode(selectedNode.id, id)}
               onDelete={() => deleteNode(selectedNode.id)}

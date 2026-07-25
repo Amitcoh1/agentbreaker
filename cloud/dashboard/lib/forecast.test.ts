@@ -106,4 +106,20 @@ describe("forecast", () => {
     expect(fc.unknownModels).toContain("u");
     expect(fc.totalP50).toBe(0);
   });
+
+  it("a per-node model override changes that node's cost (what-if preview)", () => {
+    const priced = MODEL_NAMES.filter((m) => (perCallUsd(m, 1024) ?? 0) > 0);
+    const m1 = priced[0];
+    const m2 = priced.find((m) => perCallUsd(m, 1024) !== perCallUsd(m1, 1024)) ?? priced[1];
+    const g = spec(
+      [{ id: "s", type: "start" }, model("a", 1024, m1), { id: "e", type: "end" }],
+      [{ source: "s", target: "a" }, { source: "a", target: "e" }],
+    );
+    const base = forecast(g);
+    const preview = forecast(g, { ...DEFAULT_ASSUMPTIONS, modelOverrides: { a: m2 } });
+    expect(preview.perNode.a.p50).not.toBe(base.perNode.a.p50);
+    expect(preview.perNode.a.p50!).toBeCloseTo(
+      perCallUsd(m2, Math.round(1024 * DEFAULT_ASSUMPTIONS.outputFractionP50))!,
+    );
+  });
 });

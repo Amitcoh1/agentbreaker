@@ -18,6 +18,8 @@ export interface ForecastAssumptions {
   loopIterationsP50: number;
   loopIterationsP95: number;
   outputFractionP50: number; // fraction of max_tokens used for the p50 output estimate (p95 = 1.0)
+  /** nodeId -> model, for what-if "try a different model here" previews (never committed to the spec) */
+  modelOverrides?: Record<string, string>;
 }
 
 export const DEFAULT_ASSUMPTIONS: ForecastAssumptions = {
@@ -128,9 +130,10 @@ export function forecast(spec: GraphSpec, a: ForecastAssumptions = DEFAULT_ASSUM
     const calls = flow.get(n.id) ?? 0;
     if (calls === 0) continue; // unreachable from start
     const isLooped = looped.has(n.id);
+    const model = a.modelOverrides?.[n.id] ?? n.model;
     const mt = n.max_tokens ?? 1024;
-    const perP50 = perCallUsd(n.model, Math.round(mt * a.outputFractionP50));
-    const perP95 = perCallUsd(n.model, mt);
+    const perP50 = perCallUsd(model, Math.round(mt * a.outputFractionP50));
+    const perP95 = perCallUsd(model, mt);
     const known = perP50 != null && perP95 != null;
     const multP50 = isLooped ? a.loopIterationsP50 : 1;
     const multP95 = isLooped ? a.loopIterationsP95 : 1;

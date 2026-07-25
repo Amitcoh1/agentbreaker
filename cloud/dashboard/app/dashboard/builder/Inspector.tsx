@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Copy } from "lucide-react";
-import type { SpecNode } from "@/lib/graphspec";
+import type { GraphSpec, SpecNode } from "@/lib/graphspec";
 import { isKnownModel, perCallUsd, usd } from "@/lib/pricing";
+import { forecast, type Forecast, type ForecastAssumptions } from "@/lib/forecast";
 import AiSuggest from "./AiSuggest";
 
 const INPUT =
@@ -33,18 +34,32 @@ const PURPOSE: Record<SpecNode["type"], string> = {
 
 export default function Inspector({
   node,
+  spec,
+  assumptions,
+  forecast: base,
   onChange,
   onRename,
   onDelete,
   onDuplicate,
 }: {
   node: SpecNode;
+  spec: GraphSpec;
+  assumptions: ForecastAssumptions;
+  forecast: Forecast;
   onChange: (patch: Partial<SpecNode>) => void;
   onRename: (id: string) => void;
   onDelete: () => void;
   onDuplicate: () => void;
 }) {
   const [id, setId] = useState(node.id);
+  const [previewModel, setPreviewModel] = useState("");
+  const previewFc = useMemo(
+    () =>
+      node.type === "model" && previewModel && isKnownModel(previewModel)
+        ? forecast(spec, { ...assumptions, modelOverrides: { [node.id]: previewModel } })
+        : null,
+    [node.type, node.id, previewModel, spec, assumptions],
+  );
   const commitId = () => {
     const clean = id.trim();
     if (clean && clean !== node.id) onRename(clean);
@@ -126,6 +141,35 @@ export default function Inspector({
                 : ""}
             </p>
           )}
+          <div className="rounded-lg bg-ink/[0.04] px-3 py-2">
+            <span className="text-[11px] text-muted">Try a different model (preview only — not saved):</span>
+            <input
+              className={INPUT}
+              list="ab-models"
+              value={previewModel}
+              onChange={(e) => setPreviewModel(e.target.value)}
+              placeholder="e.g. anthropic/claude-haiku-4-5"
+            />
+            {previewFc &&
+              base.reachable &&
+              (() => {
+                const d =
+                  base.totalP50 > 0 ? ((previewFc.totalP50 - base.totalP50) / base.totalP50) * 100 : 0;
+                return (
+                  <p className="mt-1 text-[11px]">
+                    total {usd(base.totalP50)}–{usd(base.totalP95)} → {usd(previewFc.totalP50)}–
+                    {usd(previewFc.totalP95)}{" "}
+                    <span style={{ color: d < 0 ? "#3fa564" : "#b8860b" }}>
+                      ({d >= 0 ? "+" : ""}
+                      {d.toFixed(0)}%)
+                    </span>
+                  </p>
+                );
+              })()}
+            {previewModel && !isKnownModel(previewModel) && (
+              <p className="mt-1 text-[11px] text-muted">Not in the price table — no estimate.</p>
+            )}
+          </div>
         </>
       )}
 

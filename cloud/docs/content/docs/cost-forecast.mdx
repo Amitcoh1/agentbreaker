@@ -1,0 +1,48 @@
+---
+title: Cost forecast
+description: Forecast an agent workflow's dollar cost on the canvas — before you run it.
+---
+
+## Cost before the first token
+
+The builder forecasts what a run will cost **while you design it** — no API calls, nothing executed.
+Most visual builders only show cost _after_ a run, on their key. Breakerbox shows a **p50–p95 band**
+per node and for the whole graph, right on the canvas.
+
+> An estimate, not a quote. It's a heuristic — clearly labeled as one — and gets calibrated by your
+> own run receipts over time.
+
+## Reading the forecast
+
+- **The band.** `p50` is the typical run; `p95` is the bad-but-plausible tail — the loop that spins.
+  A single number hides that tail, which is the whole point of a budget tool, so the forecast is
+  always a range.
+- **Per-node badges.** Each model node shows `run ≈ $p50–$p95`. A node inside a loop is marked with a
+  brass `↻` — its cost is multiplied by the expected iterations.
+- **Total vs budget.** The Budget Tree shows the total band against your root budget. If the p95 tail
+  could exceed the budget you get a **warning** — not a block. The hard export gate stays the
+  `sub_budget` over-allocation check.
+
+## How it's computed
+
+Expected cost = per-call cost × expected calls, summed across the graph:
+
+- **Per-call cost** comes from the price table (`~1000 input tokens + max output` at the model's rate).
+- **Expected calls** is a static walk of the graph — routers split flow across their branches, and
+  nodes inside a cycle are multiplied by a loop-iteration assumption.
+- **The band** comes from two honest sources of variance:
+  - _loop iterations_ — `p50` few, `p95` many;
+  - _output tokens_ — `p50` a fraction of `max_tokens`, `p95` the full cap (what the guard reserves).
+
+## What-if
+
+- **Loop slider.** Drag "loops ≈ N×" and the whole band and every node badge recompute live — watch a
+  runaway loop turn a $0.40 run into a $3+ tail.
+- **Model swap.** On any model node, pick a different model under _"try a different model (preview
+  only)"_ to see the whole-graph forecast recompute — e.g. swapping a branch to Haiku might cut it
+  −67%. The preview never changes your graph.
+
+## It never touches your code
+
+The forecast is advisory. It's computed entirely in the browser and **does not affect the generated
+Python** — the code you export is exactly what the golden-fixture tests lock, forecast or no forecast.

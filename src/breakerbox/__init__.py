@@ -22,4 +22,4 @@ __all__ = [
     "guard",
     "mark_side_effecting",
 ]
-__version__ = "0.0.1"
+__version__ = "0.5.0"

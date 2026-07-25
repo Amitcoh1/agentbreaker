@@ -15,6 +15,7 @@ import {
 import { Copy, Download, FileUp, HelpCircle, LayoutGrid, Plus, Save, X } from "lucide-react";
 import BudgetTree from "./BudgetTree";
 import BuilderNode from "./BuilderNode";
+import CalibrateForecast from "./CalibrateForecast";
 import Inspector from "./Inspector";
 import TemplatesMenu from "./TemplatesMenu";
 import Tour, { type TourStep } from "./Tour";
@@ -31,6 +32,7 @@ import {
 import { type FlowNode, canConnect, duplicateFlow, flowToSpec, newNode, nodeIssues, specToFlow } from "@/lib/graphflow";
 import { MODEL_NAMES } from "@/lib/pricing";
 import { DEFAULT_ASSUMPTIONS, forecast } from "@/lib/forecast";
+import type { Calibration } from "@/lib/calibration";
 
 const nodeTypes = { ab: BuilderNode };
 const STORAGE = "ab_builder_spec";
@@ -89,13 +91,17 @@ export default function BuilderPage() {
   const result = useMemo(() => validate(spec), [spec]);
   const issues = useMemo(() => nodeIssues(spec), [spec]);
   const [loopIters, setLoopIters] = useState(3);
+  const [cal, setCal] = useState<Calibration | null>(null);
+  // Calibration (from real receipts) overrides the loop-count slider and feeds per-model output
+  // tokens; without it we fall back to the slider + heuristic tail.
   const assumptions = useMemo(
     () => ({
       ...DEFAULT_ASSUMPTIONS,
-      loopIterationsP50: loopIters,
-      loopIterationsP95: Math.max(8, Math.round((loopIters * 8) / 3)),
+      loopIterationsP50: cal?.loopIterationsP50 ?? loopIters,
+      loopIterationsP95: cal?.loopIterationsP95 ?? Math.max(8, Math.round((loopIters * 8) / 3)),
+      perModelOutputTokens: cal?.perModelOutputTokens,
     }),
-    [loopIters],
+    [loopIters, cal],
   );
   const fc = useMemo(() => forecast(spec, assumptions), [spec, assumptions]);
   const canExport = result.ok;
@@ -356,6 +362,7 @@ export default function BuilderPage() {
 
         <div data-tour="budget" className="w-80 shrink-0 space-y-3 overflow-y-auto border-l border-border p-3">
           <BudgetTree spec={spec} forecast={fc} loopIters={loopIters} onLoopIters={setLoopIters} />
+          <CalibrateForecast cal={cal} onCal={setCal} />
           <GuardConfig
             config={config ?? {}}
             onChange={(patch) => setConfig((c) => ({ ...c, ...patch }))}

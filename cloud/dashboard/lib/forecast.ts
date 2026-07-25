@@ -20,6 +20,12 @@ export interface ForecastAssumptions {
   outputFractionP50: number; // fraction of max_tokens used for the p50 output estimate (p95 = 1.0)
   /** nodeId -> model, for what-if "try a different model here" previews (never committed to the spec) */
   modelOverrides?: Record<string, string>;
+  /**
+   * model -> realized output tokens (p50/p95) measured from run receipts (see calibration.ts). When a
+   * model is present here we use these instead of the max_tokens×fraction heuristic — this is what
+   * narrows the band toward what actually happened. Absent models keep the heuristic.
+   */
+  perModelOutputTokens?: Record<string, { p50: number; p95: number }>;
 }
 
 export const DEFAULT_ASSUMPTIONS: ForecastAssumptions = {
@@ -132,8 +138,9 @@ export function forecast(spec: GraphSpec, a: ForecastAssumptions = DEFAULT_ASSUM
     const isLooped = looped.has(n.id);
     const model = a.modelOverrides?.[n.id] ?? n.model;
     const mt = n.max_tokens ?? 1024;
-    const perP50 = perCallUsd(model, Math.round(mt * a.outputFractionP50));
-    const perP95 = perCallUsd(model, mt);
+    const cal = model ? a.perModelOutputTokens?.[model] : undefined;
+    const perP50 = perCallUsd(model, cal ? cal.p50 : Math.round(mt * a.outputFractionP50));
+    const perP95 = perCallUsd(model, cal ? cal.p95 : mt);
     const known = perP50 != null && perP95 != null;
     const multP50 = isLooped ? a.loopIterationsP50 : 1;
     const multP95 = isLooped ? a.loopIterationsP95 : 1;

@@ -23,6 +23,16 @@ def main(argv: list[str] | None = None) -> int:
     bld.add_argument("spec", help="path to a graph spec.json")
     bld.add_argument("-o", "--output", default=None, help="write .py here (default: stdout)")
 
+    ceil = sub.add_parser("ceiling", help="print the provable worst-case cost ceiling of a spec")
+    ceil.add_argument("spec", help="path to a graph spec.json")
+    ceil.add_argument(
+        "--max",
+        type=float,
+        default=None,
+        help="fail if the ceiling exceeds this USD (or is unbounded)",
+    )
+    ceil.add_argument("--json", action="store_true", help="machine-readable output")
+
     ini = sub.add_parser("init", help="scaffold a guarded starter from a template")
     ini.add_argument("-t", "--template", default=None, help="template name (see --list)")
     ini.add_argument("--list", action="store_true", help="list available templates")
@@ -61,6 +71,23 @@ def main(argv: list[str] | None = None) -> int:
             print(f"wrote {args.output}")
         else:
             print(code, end="")
+        return 0
+    if args.command == "ceiling":
+        import json as _json
+
+        from breakerbox import ceiling as _ceiling
+        from breakerbox import graphspec
+
+        c = _ceiling.cost_ceiling(graphspec.load_spec(args.spec))
+        if args.json:
+            print(_json.dumps(c.__dict__))
+        else:
+            print(_ceiling.format_ceiling(c))
+        # CI gate: fail when a limit is set and the ceiling is unbounded or exceeds it.
+        if args.max is not None and (c.ceiling_usd is None or c.ceiling_usd > args.max):
+            got = "unbounded" if c.ceiling_usd is None else f"${c.ceiling_usd:.2f}"
+            print(f"FAIL: ceiling {got} exceeds the --max ${args.max:.2f} limit.")
+            return 1
         return 0
     if args.command == "init":
         from pathlib import Path

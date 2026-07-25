@@ -1,0 +1,49 @@
+# Breakerbox CI budget gate (#5) — fail a PR when a LangGraph spec's provable worst-case
+# dollar ceiling exceeds a limit. Static: no API calls, no keys, no execution. Wraps
+# `breakerbox ceiling <spec>... --max <usd>`, whose exit code is this action's exit code.
+name: "Breakerbox cost ceiling gate"
+description: "Fail a PR when a LangGraph spec's provable worst-case $ ceiling exceeds a limit — no API calls, no keys."
+author: "Breakerbox"
+branding:
+  icon: "shield"
+  color: "orange"
+
+inputs:
+  spec:
+    description: "Path or glob to graph spec .json file(s), e.g. 'specs/*.spec.json'. A glob checks every match."
+    required: true
+  max:
+    description: "Max allowed worst-case USD per spec. A spec whose ceiling exceeds this — or is unbounded — fails the run."
+    required: true
+  python-version:
+    description: "Python version used to run breakerbox."
+    required: false
+    default: "3.12"
+  breakerbox-version:
+    description: "pip version specifier for breakerbox, e.g. '>=0.6.0' or '==0.6.0'. `breakerbox ceiling` needs >= 0.6.0."
+    required: false
+    default: ">=0.6.0"
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+    - shell: bash
+      run: pip install "breakerbox${{ inputs.breakerbox-version }}"
+    - shell: bash
+      env:
+        SPEC: ${{ inputs.spec }}
+        MAX: ${{ inputs.max }}
+      run: |
+        echo '### Breakerbox cost ceiling' >> "$GITHUB_STEP_SUMMARY"
+        printf '```text\n' >> "$GITHUB_STEP_SUMMARY"
+        set +e  # capture the CLI exit code through the tee instead of letting errexit abort
+        # $SPEC is intentionally unquoted so a glob expands to every matching spec file.
+        breakerbox ceiling $SPEC --max "$MAX" 2>&1 | tee /tmp/breakerbox_ceiling.txt
+        code=${PIPESTATUS[0]}
+        set -e
+        cat /tmp/breakerbox_ceiling.txt >> "$GITHUB_STEP_SUMMARY"
+        printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
+        exit "$code"

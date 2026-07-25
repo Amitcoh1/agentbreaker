@@ -24,7 +24,7 @@ def main(argv: list[str] | None = None) -> int:
     bld.add_argument("-o", "--output", default=None, help="write .py here (default: stdout)")
 
     ceil = sub.add_parser("ceiling", help="print the provable worst-case cost ceiling of a spec")
-    ceil.add_argument("spec", help="path to a graph spec.json")
+    ceil.add_argument("spec", nargs="+", help="path(s) to graph spec.json file(s)")
     ceil.add_argument(
         "--max",
         type=float,
@@ -78,17 +78,24 @@ def main(argv: list[str] | None = None) -> int:
         from breakerbox import ceiling as _ceiling
         from breakerbox import graphspec
 
-        c = _ceiling.cost_ceiling(graphspec.load_spec(args.spec))
-        if args.json:
-            print(_json.dumps(c.__dict__))
-        else:
-            print(_ceiling.format_ceiling(c))
-        # CI gate: fail when a limit is set and the ceiling is unbounded or exceeds it.
-        if args.max is not None and (c.ceiling_usd is None or c.ceiling_usd > args.max):
-            got = "unbounded" if c.ceiling_usd is None else f"${c.ceiling_usd:.2f}"
-            print(f"FAIL: ceiling {got} exceeds the --max ${args.max:.2f} limit.")
-            return 1
-        return 0
+        multi = len(args.spec) > 1
+        failed = False
+        for idx, spec_path in enumerate(args.spec):
+            c = _ceiling.cost_ceiling(graphspec.load_spec(spec_path))
+            if args.json:
+                print(_json.dumps({"spec": spec_path, **c.__dict__}))
+            else:
+                if multi:
+                    print(f"# {spec_path}")
+                print(_ceiling.format_ceiling(c))
+            # CI gate: fail when a limit is set and the ceiling is unbounded or exceeds it.
+            if args.max is not None and (c.ceiling_usd is None or c.ceiling_usd > args.max):
+                got = "unbounded" if c.ceiling_usd is None else f"${c.ceiling_usd:.2f}"
+                print(f"FAIL: ceiling {got} exceeds the --max ${args.max:.2f} limit.")
+                failed = True
+            if not args.json and multi and idx < len(args.spec) - 1:
+                print()
+        return 1 if failed else 0
     if args.command == "init":
         from pathlib import Path
 

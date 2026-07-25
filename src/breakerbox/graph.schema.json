@@ -33,6 +33,7 @@
           "sub_budget_usd": {"type": "number", "minimum": 0},
           "name": {"type": "string"},
           "side_effecting": {"type": "boolean"},
+          "side_effect_class": {"enum": ["read", "network", "write", "destructive"]},
           "condition": {"type": "string"}
         },
         "additionalProperties": false

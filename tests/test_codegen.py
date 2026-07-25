@@ -46,14 +46,25 @@ def test_router_becomes_conditional_edges_with_side_effect_comments():
 
 
 # --- golden fixtures: the contract the Phase D TS mirror must match ----------
-@pytest.mark.parametrize("name", ["linear", "router_cycle", "with_code"])
+@pytest.mark.parametrize("name", ["linear", "router_cycle", "with_code", "side_effects"])
 def test_codegen_matches_golden(name):
     assert codegen.generate(_spec(name)) == (FX / f"{name}.py").read_text()
 
 
-def test_validator_messages_match_golden():
-    errors = graphspec.validate(_spec("over_allocation")).errors
-    assert errors == json.loads((FX / "over_allocation.errors.json").read_text())
+@pytest.mark.parametrize("name", ["over_allocation", "side_effect_bad"])
+def test_validator_messages_match_golden(name):
+    errors = graphspec.validate(_spec(name)).errors
+    assert errors == json.loads((FX / f"{name}.errors.json").read_text())
+
+
+def test_destructive_tool_wires_human_approval_gate():
+    # The security payload of side_effect_class=destructive: an interrupt_before is baked into the
+    # compiled graph so the run pauses for a human before the destructive node.
+    code = codegen.generate(_spec("side_effects"))
+    assert 'interrupt_before=["delete"]' in code
+    assert "· class=destructive" in code
+    # a read-classified tool is not flagged side-effecting
+    assert "side_effecting=False · class=read" in code
 
 
 # --- round-trip identity ----------------------------------------------------

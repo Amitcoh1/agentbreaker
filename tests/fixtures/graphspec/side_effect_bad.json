@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "config": { "budget_usd": 5.0 },
+  "nodes": [
+    { "id": "start", "type": "start" },
+    { "id": "bad", "type": "tool", "name": "oops", "side_effect_class": "nuke" },
+    { "id": "end", "type": "end" }
+  ],
+  "edges": [
+    { "source": "start", "target": "bad" },
+    { "source": "bad", "target": "end" }
+  ]
+}

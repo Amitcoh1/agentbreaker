@@ -1,0 +1,65 @@
+---
+title: CI budget gate
+description: Fail a pull request when an agent's provable worst-case dollar ceiling exceeds a limit — statically, with no API calls and no keys.
+---
+
+The **cost ceiling** is a *provable* upper bound on what a spec can spend: every reachable model hop
+charged at its full `max_tokens`, a loop charged `max_hops × the costliest hop` (a loop with no
+`max_hops` is honestly reported **unbounded**). Computed with **zero API calls** — so it belongs in
+CI, where a pull request that pushes a graph past your budget should turn the check red.
+
+## The GitHub Action
+
+```yaml
+# .github/workflows/cost-ceiling.yml
+name: cost-ceiling
+on: [pull_request]
+
+jobs:
+  ceiling:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Amitcoh1/agentbreaker@main # pin a released tag (e.g. @v0.6.0) for reproducible CI
+        with:
+          spec: "specs/*.spec.json" # a path or a glob — a glob checks every match
+          max: "2.00" # fail if any spec's ceiling exceeds $2.00 (or is unbounded)
+```
+
+The check fails when any matched spec's ceiling exceeds `max` **or** is unbounded, and the proof is
+written to the job's step summary. That's it — no execution, no provider key, nothing to leak.
+
+### Inputs
+
+| Input | Required | Default | What it does |
+|---|---|---|---|
+| `spec` | ✅ | — | Path or glob to graph spec `.json` file(s). A glob checks every match. |
+| `max` | ✅ | — | Max allowed worst-case USD **per spec**. Over this, or unbounded, fails the run. |
+| `python-version` | — | `3.12` | Python used to run breakerbox. |
+| `breakerbox-version` | — | `>=0.6.0` | pip version specifier. `breakerbox ceiling` requires **≥ 0.6.0**. |
+
+## The CLI it wraps
+
+The action is a thin wrapper around the same command you can run locally or in any CI:
+
+```bash
+breakerbox ceiling specs/*.spec.json --max 2.00
+```
+
+Exit `0` within the limit, exit `1` when a spec is over-limit or unbounded — so it drops into a
+`Makefile`, a pre-commit hook, or a non-GitHub pipeline unchanged. Drop `--max` to just print the
+proof:
+
+```text
+Worst-case ceiling: ≤ $1.69  (proven, no API calls)
+  Basis: 50 hops × the costliest call ($0.0337).
+```
+
+## Notes
+
+- **The ceiling is a bound, not an estimate.** Unlike the [cost forecast](/docs/cost-forecast) (a
+  p50–p95 *estimate*), this is a true upper bound. Unpriced models are excluded, so the real ceiling
+  can only be *higher* — the CLI says so when that happens.
+- **`breakerbox ceiling` needs ≥ 0.6.0.** The action installs it from PyPI; pin `breakerbox-version`
+  if you want a fixed version.
+- The action requires you to `actions/checkout` first — it reads your specs from the workspace.

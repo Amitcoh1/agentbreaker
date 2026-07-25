@@ -49,6 +49,7 @@ exactly where the money went. In the [bundled demo](#the-demo), a runaway retry 
 - [The demo](#the-demo)
 - [What it actually does](#what-it-actually-does)
 - [Build it visually](#build-it-visually)
+- [Gate cost in CI](#gate-cost-in-ci)
 - [Why no Run button?](#why-no-run-button)
 - [How it compares](#how-it-compares-facts-only)
 - [Notes & limitations](#notes--limitations-read-before-you-rely-on-it)
@@ -163,6 +164,26 @@ and sent only to the provider, never to a Breakerbox server (there is no server 
 Anthropic supports browser-direct calls; OpenAI blocks browser CORS, so for OpenAI you point the
 base URL at your own CORS-enabled proxy. The suggestion is copy-paste scaffolding — it's never
 written into the saved graph, so codegen stays deterministic.
+
+## Gate cost in CI
+
+Make your agent's cost a unit test. The **provable cost ceiling** — every reachable hop at full
+`max_tokens`, a loop charged `max_hops × the costliest hop` — is computed with **zero API calls**,
+so it runs in CI and fails a pull request that pushes a graph past your budget:
+
+```yaml
+# .github/workflows/cost-ceiling.yml
+- uses: actions/checkout@v4
+- uses: Amitcoh1/agentbreaker@main    # pin a released tag (e.g. @v0.6.0) for reproducible CI
+  with:
+    spec: "specs/*.spec.json"
+    max: "2.00"                       # red PR if any spec's ceiling exceeds $2.00 (or is unbounded)
+```
+
+Same check locally or in any pipeline — `breakerbox ceiling specs/*.spec.json --max 2.00` exits `1`
+when over-limit or unbounded. See [CI budget gate](https://docs-rosy-sigma.vercel.app/docs/ci-gate).
+
+> Needs `breakerbox >= 0.6.0` (the release that ships `breakerbox ceiling`).
 
 ## Why no Run button?
 

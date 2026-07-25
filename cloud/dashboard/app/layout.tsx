@@ -1,13 +1,27 @@
 import "./globals.css";
 import type { ReactNode } from "react";
-import { Inter } from "next/font/google";
+import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 
-// Inter is shared: the dashboard body font (--font-sans) and the marketing body font (--body).
+// One type system across all three sites: Inter body (--font-sans), Space Grotesk display headings
+// (--font-display), JetBrains Mono for numbers/code (--font-jbmono) — matches the marketing scale (#21).
 const sans = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-sans",
 });
+const display = Space_Grotesk({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-display",
+});
+const jbmono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-jbmono",
+});
+
+// Set the saved theme before first paint so there's no dark→light flash on load.
+const themeInit = `(function(){try{var t=localStorage.getItem('ab_theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;}catch(e){}})();`;
 
 export const metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://breakerbox-cyan.vercel.app"),
@@ -19,7 +33,10 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={sans.variable}>
+    <html lang="en" className={`${sans.variable} ${display.variable} ${jbmono.variable}`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
+      </head>
       <body className="font-sans">{children}</body>
     </html>
   );

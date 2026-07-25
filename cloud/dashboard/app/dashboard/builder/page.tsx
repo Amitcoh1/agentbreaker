@@ -12,10 +12,11 @@ import {
   useEdgesState,
   useNodesState,
 } from "@xyflow/react";
-import { Copy, Download, FileUp, HelpCircle, LayoutGrid, Plus, Save, X } from "lucide-react";
+import { Copy, Download, FileUp, HelpCircle, LayoutGrid, Play, Plus, Save, X } from "lucide-react";
 import BudgetTree from "./BudgetTree";
 import BuilderNode from "./BuilderNode";
 import Inspector from "./Inspector";
+import DryRunPlayground from "./DryRunPlayground";
 import TemplatesMenu from "./TemplatesMenu";
 import Tour, { type TourStep } from "./Tour";
 import { NodeForecasts, NodeIssues } from "./context";
@@ -80,6 +81,7 @@ export default function BuilderPage() {
   const [selNode, setSelNode] = useState<string | null>(null);
   const [selEdge, setSelEdge] = useState<string | null>(null);
   const [code, setCode] = useState<string | null>(null);
+  const [dryOpen, setDryOpen] = useState(false);
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem(STORAGE) : null;
@@ -319,6 +321,14 @@ export default function BuilderPage() {
           Generate Python
         </button>
         <button
+          onClick={() => setDryOpen(true)}
+          disabled={!canExport}
+          className={ghost(canExport)}
+          title="Simulate a run on the canvas — no keys, nothing executed"
+        >
+          <Play className="h-4 w-4" /> Dry run
+        </button>
+        <button
           onClick={() => download("workflow.py", generate(spec), "text/x-python")}
           disabled={!canExport}
           className={ghost(canExport)}
@@ -454,6 +464,7 @@ export default function BuilderPage() {
       </div>
 
       {code !== null && <CodeModal code={code} onClose={() => setCode(null)} />}
+      {dryOpen && <DryRunPlayground spec={spec} onClose={() => setDryOpen(false)} />}
       <Tour steps={TOUR} storageKey="ab_tour_builder_v1" />
     </div>
   );

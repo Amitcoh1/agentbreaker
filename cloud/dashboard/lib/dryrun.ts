@@ -1,11 +1,12 @@
-// Codegen-safe "dry run": a pure, no-network simulation of one execution path through the graph.
-// The generated artifact is Python (can't run in the browser), so this doesn't execute anything —
-// it walks the spec (start → edges → routers → loops), accounts cost like the guard's reserve
-// (block the hop that would cross the budget), and stops at max_hops. Tool nodes run arbitrary
-// Python, so they're never executed here — they're stubbed and their side-effect flag surfaced.
+// Codegen-safe "dry run": a simulation of one execution path through the graph. The generated
+// artifact is Python (can't run in the browser), so this walks the spec (start → edges → routers →
+// loops), accounts cost like the guard's reserve (block the hop that would cross the budget), and
+// stops at max_hops. Tool nodes run arbitrary Python, so they're never executed here — they're
+// stubbed and their side-effect flag surfaced.
 //
-// Mock mode uses this directly. Live BYO-key mode (later) reuses the same walk but fills model
-// hops with real calls + real token usage.
+// The walk is one generator, driven two ways: `simulate` supplies estimated per-hop cost (mock,
+// pure, no network); `simulateLive` awaits a real model call per hop for real token usage + cost.
+// The graph traversal — routing, loops, budget/max_hops stops — is identical for both.
 import type { GraphSpec, SpecNode } from "./graphspec";
 import { perCallUsd } from "./pricing";
 import { DEFAULT_ASSUMPTIONS } from "./forecast";
@@ -39,6 +40,14 @@ export interface DryOptions {
   maxSteps?: number;
 }
 
+/** What a driver hands back for one model hop (mock estimate or real call). */
+export interface ModelResolve {
+  usd: number;
+  model?: string;
+  note?: string;
+  stubbed?: boolean;
+}
+
 /** The outgoing branches of a router node, for the UI's per-router picker. */
 export function routerOptions(spec: GraphSpec, nodeId: string): { label: string; target: string }[] {
   return (spec.edges ?? [])
@@ -46,8 +55,9 @@ export function routerOptions(spec: GraphSpec, nodeId: string): { label: string;
     .map((e) => ({ label: e.condition ?? "", target: e.target }));
 }
 
-/** Simulate one execution path. Pure: same inputs → same result, no I/O. */
-export function simulate(spec: GraphSpec, opts: DryOptions = {}): DryResult {
+// The shared traversal. Yields each model node and waits for the driver to supply its cost (so the
+// budget stop can use a real or estimated number); handles tool/router/start/end/loops internally.
+function* walk(spec: GraphSpec, opts: DryOptions): Generator<SpecNode, DryResult, ModelResolve> {
   const nodes = spec.nodes ?? [];
   const edges = spec.edges ?? [];
   const byId = new Map(nodes.map((n) => [n.id, n]));
@@ -60,7 +70,6 @@ export function simulate(spec: GraphSpec, opts: DryOptions = {}): DryResult {
   const outEdges = (id: string) => edges.filter((e) => e.source === id);
   const budget = spec.config?.budget_usd ?? Infinity;
   const maxHops = spec.config?.max_hops ?? 50;
-  const outFrac = opts.outputFraction ?? DEFAULT_ASSUMPTIONS.outputFractionP50;
   const hardCap = opts.maxSteps ?? 2000;
 
   let current = start.id;
@@ -80,19 +89,20 @@ export function simulate(spec: GraphSpec, opts: DryOptions = {}): DryResult {
     if (hops >= maxHops) return { trace, stop: "max_hops", totalUsd: total, hops };
 
     if (node.type === "model") {
-      const per = perCallUsd(node.model, Math.round((node.max_tokens ?? 1024) * outFrac));
-      const usd = per ?? 0;
-      if (total + usd > budget) return { trace, stop: "budget", totalUsd: total, hops };
-      total += usd;
+      const r = yield node; // driver supplies the cost (estimate or real)
+      if (total + r.usd > budget) return { trace, stop: "budget", totalUsd: total, hops };
+      total += r.usd;
       hops++;
       trace.push({
         nodeId: current,
         type: "model",
-        model: node.model,
-        usd,
-        stubbed: true,
-        note: per == null ? "unpriced model" : undefined,
+        model: r.model ?? node.model,
+        usd: r.usd,
+        stubbed: r.stubbed,
+        note: r.note,
       });
+      if (!outs.length) return { trace, stop: "dead-end", totalUsd: total, hops };
+      current = outs[0].target;
     } else if (node.type === "tool") {
       hops++;
       trace.push({
@@ -103,6 +113,8 @@ export function simulate(spec: GraphSpec, opts: DryOptions = {}): DryResult {
         stubbed: true,
         note: "not executed in dry-run",
       });
+      if (!outs.length) return { trace, stop: "dead-end", totalUsd: total, hops };
+      current = outs[0].target;
     } else if (node.type === "router") {
       hops++;
       const branches = routerOptions(spec, current);
@@ -115,13 +127,42 @@ export function simulate(spec: GraphSpec, opts: DryOptions = {}): DryResult {
       });
       if (!chosen) return { trace, stop: "dead-end", totalUsd: total, hops };
       current = chosen;
-      continue;
-    }
-
-    if (node.type === "model" || node.type === "tool") {
-      if (!outs.length) return { trace, stop: "dead-end", totalUsd: total, hops };
-      current = outs[0].target;
     }
   }
   return { trace, stop: "max_hops", totalUsd: total, hops };
+}
+
+/** Simulate one execution path with estimated cost. Pure: same inputs → same result, no I/O. */
+export function simulate(spec: GraphSpec, opts: DryOptions = {}): DryResult {
+  const outFrac = opts.outputFraction ?? DEFAULT_ASSUMPTIONS.outputFractionP50;
+  const g = walk(spec, opts);
+  let res = g.next();
+  while (!res.done) {
+    const node = res.value;
+    const per = perCallUsd(node.model, Math.round((node.max_tokens ?? 1024) * outFrac));
+    res = g.next({
+      usd: per ?? 0,
+      model: node.model,
+      stubbed: true,
+      note: per == null ? "unpriced model" : undefined,
+    });
+  }
+  return res.value;
+}
+
+/** A real per-hop model call for live mode: given a model node, return its measured cost + note. */
+export type LiveCall = (node: SpecNode) => Promise<ModelResolve>;
+
+/** Same walk, but each model hop is a real BYO-key call. Tools are still stubbed (Python isn't run). */
+export async function simulateLive(
+  spec: GraphSpec,
+  opts: DryOptions,
+  call: LiveCall,
+): Promise<DryResult> {
+  const g = walk(spec, opts);
+  let res = g.next();
+  while (!res.done) {
+    res = g.next(await call(res.value));
+  }
+  return res.value;
 }

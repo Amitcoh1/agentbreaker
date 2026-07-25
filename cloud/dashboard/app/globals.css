@@ -2,8 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Themed tokens as RGB channels — a single data-theme swap on <html> repaints everything, and the
+   channel form keeps Tailwind opacity modifiers (bg-ink/5, ring-ink/35) working. Dark is default
+   (the brand's primary mode); light overrides only the channels. */
 :root {
+  --c-bg: 15 17 20;
+  --c-surface: 20 23 27;
+  --c-card: 24 28 33;
+  --c-border: 48 56 65;
+  --c-fg: 242 240 233;
+  --c-muted: 152 161 173;
   color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --c-bg: 250 249 245;
+  --c-surface: 255 255 255;
+  --c-card: 255 255 255;
+  --c-border: 230 226 216;
+  --c-fg: 26 28 30;
+  --c-muted: 107 114 128;
+  color-scheme: light;
 }
 
 body {
@@ -14,6 +33,12 @@ body {
 @layer base {
   :focus-visible {
     @apply outline-none ring-2 ring-ink/35 ring-offset-1 ring-offset-bg;
+  }
+  /* Space Grotesk on headings — the marketing display face, one type system across sites (#21). */
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
   }
 }
 
@@ -32,5 +57,13 @@ body {
 
 /* keep the react-flow canvas on-brand */
 .react-flow__attribution {
+  display: none;
+}
+
+/* Logo mark swaps with the theme (mark-dark reads on dark surfaces, mark-light on light). */
+:root[data-theme="light"] .mark-dark {
+  display: none;
+}
+:root:not([data-theme="light"]) .mark-light {
   display: none;
 }

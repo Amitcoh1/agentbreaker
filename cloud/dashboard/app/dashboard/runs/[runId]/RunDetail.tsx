@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { CumulativeCost } from "@/components/Charts";
+import CopyLink from "@/components/CopyLink";
 import RunControls from "@/components/RunControls";
 import { StatusBadge } from "@/components/RunsTable";
 import WorkflowDag from "@/components/WorkflowDag";
@@ -16,9 +17,11 @@ const TABS = ["Overview", "Timeline", "Workflow", "Logs", "Controls"] as const;
 export default function RunDetail({
   run: initialRun,
   initialEvents,
+  readOnly = false,
 }: {
   run: Run;
   initialEvents: RunEvent[];
+  readOnly?: boolean;
 }) {
   const [run, setRun] = useState(initialRun);
   const [events, setEvents] = useState<RunEvent[]>(initialEvents);
@@ -86,6 +89,7 @@ export default function RunDetail({
       <header className="flex flex-wrap items-center gap-3">
         <h1 className="num text-lg font-semibold">run {shortId(run.run_id)}</h1>
         <StatusBadge status={status} reason={run.trip_reason} />
+        {!readOnly && run.public && <CopyLink runId={run.run_id} />}
       </header>
 
       <div className="card p-6 text-center">
@@ -107,7 +111,7 @@ export default function RunDetail({
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {TABS.map((t) => (
+        {TABS.filter((t) => !(readOnly && t === "Controls")).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -124,7 +128,7 @@ export default function RunDetail({
       {tab === "Timeline" && <TimelineTab hops={hops} />}
       {tab === "Workflow" && <WorkflowDag events={events} />}
       {tab === "Logs" && <LogsTab events={events} />}
-      {tab === "Controls" && <RunControls run={run} events={events} />}
+      {!readOnly && tab === "Controls" && <RunControls run={run} events={events} />}
     </div>
   );
 }

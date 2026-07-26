@@ -55,6 +55,21 @@ Worst-case ceiling: ≤ $1.69  (proven, no API calls)
   Basis: 50 hops × the costliest call ($0.0337).
 ```
 
+## Cost lockfile
+
+`package-lock.json`, but for dollars. Pin the price table + each spec's ceiling into a committed
+`breakerbox.lock`, then fail CI if either drifts:
+
+```bash
+breakerbox lock specs/*.spec.json          # writes breakerbox.lock (commit it)
+breakerbox lock --check                     # exit 1 if prices moved or a ceiling changed
+```
+
+The lock records the price-table `version` and every spec's proven ceiling. `--check` recomputes and
+reports each drift — a price-table bump, a changed ceiling, or a missing spec — so a cost change can
+never land silently. This is only meaningful because the ceiling is static and deterministic; runtime
+spend has nothing stable to lock.
+
 ## Notes
 
 - **The ceiling is a bound, not an estimate.** Unlike the [cost forecast](/docs/cost-forecast) (a

@@ -11,6 +11,7 @@ import {
   saveAiSettings,
   suggestCode,
 } from "@/lib/aiSuggest";
+import { MODEL_NAMES } from "@/lib/pricing";
 
 const INPUT =
   "mt-1 w-full rounded border border-border bg-surface px-2 py-1 text-sm outline-none focus:border-ink";
@@ -94,7 +95,19 @@ export default function AiSuggest({
             </label>
             <label className="block">
               <span className="text-[11px] text-muted">model</span>
-              <input className={INPUT} value={settings.model} onChange={(e) => set({ model: e.target.value })} />
+              {/* #47: pick from the known price-table models to avoid typos; free-text still allowed
+                  (custom / proxy models) via the datalist. */}
+              <input
+                className={INPUT}
+                value={settings.model}
+                onChange={(e) => set({ model: e.target.value })}
+                list="bb-model-list"
+              />
+              <datalist id="bb-model-list">
+                {MODEL_NAMES.map((m) => (
+                  <option key={m} value={m} />
+                ))}
+              </datalist>
             </label>
           </div>
           <label className="block">

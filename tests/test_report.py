@@ -99,3 +99,19 @@ def test_write_report_produces_html_and_json(tmp_path):
     assert html_path.exists() and html_path.suffix == ".html"
     assert (tmp_path / "r1.report.json").exists()
     assert summary["status"] == "killed"
+
+
+def test_attribution_tags_flow_to_summary_terminal_and_html():
+    # #85: tags on the start event surface in the summary, terminal receipt, and HTML.
+    events = _killed_events()
+    events[0]["detail"]["tags"] = {"team": "growth", "env": "prod"}
+    s = summarize(events)
+    assert s["tags"] == {"team": "growth", "env": "prod"}
+    assert "team=growth" in render_terminal(s) and "env=prod" in render_terminal(s)
+    assert "team=growth" in render_html(s)
+
+
+def test_no_tags_is_empty_and_omitted():
+    s = summarize(_killed_events())
+    assert s["tags"] == {}
+    assert "tags:" not in render_terminal(s)

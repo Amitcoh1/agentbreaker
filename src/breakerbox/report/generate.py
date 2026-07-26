@@ -110,6 +110,7 @@ def summarize(events: list[dict]) -> dict:
         "overshoot_hops": overshoot_hops,
         "timeline": timeline,
         "side_effects_fired": [t["node"] for t in timeline if t["side_effecting"]],
+        "tags": detail.get("tags") or {},  # #85 cost-attribution (team/customer/feature/env)
     }
 
 
@@ -141,6 +142,8 @@ def render_terminal(summary: dict) -> str:
         f" stopped at {r['spent_disp']}   budget {r['budget_disp']}   hops {r['hops']}",
         f" projected (naive linear extrapolation, likely an underestimate): {r['projected_disp']}",
     ]
+    if r.get("tags"):
+        lines.append(" tags: " + "  ".join(f"{k}={v}" for k, v in r["tags"].items()))
     if r.get("has_overshoot"):
         lines.append(
             f" ⚠ {r['overshoot_hops']} hop(s): cap enforced one hop late — no max_tokens declared"

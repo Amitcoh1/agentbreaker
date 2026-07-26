@@ -131,6 +131,11 @@ before it runs. Every run also writes a self-contained `report.html`:
     `app.resume(checkpoint_id, extra_budget_usd=...)` continues from where it stopped.
   - `kill` — stops, finalizes the receipt, raises `BudgetKilled` listing which
     **side-effecting** tools already fired (so you can compensate).
+- **Runaway protection (opt-in).** Catch a loop *before* the dollar budget pays for it.
+  `detect_loops=True` trips when a node keeps re-firing with near-identical input — a no-LLM
+  fuzzy-repeat detector (character-shingle similarity), so nudging an argument doesn't evade it.
+  `live=True` streams a `$spent / $budget` counter to your terminal as each hop reconciles, so you
+  watch it climb in real time instead of finding out from the invoice.
 - **Self-metering.** Counts input tokens locally (tiktoken) and meters streamed output
   chunks, then reconciles against the provider's reported usage and flags discrepancies —
   never trusts a single `usage` field, never meters an unknown model as `$0`. If a call ran

@@ -266,3 +266,43 @@ def test_deep_nesting_runs_without_max_depth(tmp_path):
         {"count": 0}, {"recursion_limit": 100}
     )
     assert out["count"] == 1
+
+
+# --- #90 warn-before-kill alert rail ----------------------------------------
+def test_parse_alerts_config():
+    from breakerbox.guard import _DEFAULT_ALERT_THRESHOLDS, _parse_alerts
+
+    assert _parse_alerts(False) == ([], None)
+    assert _parse_alerts(None) == ([], None)
+    thr, fn = _parse_alerts(True)
+    assert thr == list(_DEFAULT_ALERT_THRESHOLDS) and fn is None
+
+    def cb(_):
+        return None
+
+    assert _parse_alerts(cb) == (list(_DEFAULT_ALERT_THRESHOLDS), cb)
+    thr, fn = _parse_alerts({"thresholds": [0.9, 0.5], "on_alert": cb})
+    assert thr == [0.5, 0.9] and fn is cb  # sorted
+    with pytest.raises(ValueError):
+        _parse_alerts({"thresholds": [1.5]})
+
+
+def test_alert_callback_fires_once_per_threshold_with_rising_spend(tmp_path):
+    fired = []
+    # big budget so the run completes; low thresholds so actual spend crosses them.
+    guarded = guard(
+        build(10), budget_usd=1.0, on_trip="kill", report_dir=tmp_path,
+        alerts={"thresholds": [0.0005, 0.001, 0.005], "on_alert": fired.append},
+    )
+    guarded.invoke({"count": 0}, {"recursion_limit": 100})
+    assert sorted(a["threshold"] for a in fired) == [0.0005, 0.001, 0.005]  # each once
+    assert all(a["budget_usd"] == 1.0 and a["spent_usd"] > 0 for a in fired)
+
+
+def test_alerts_default_logs_to_stderr(tmp_path, capsys):
+    guarded = guard(
+        build(5), budget_usd=1.0, on_trip="kill", report_dir=tmp_path,
+        alerts={"thresholds": [0.001]},  # no on_alert → logs to stderr
+    )
+    guarded.invoke({"count": 0}, {"recursion_limit": 100})
+    assert "% of budget spent" in capsys.readouterr().err

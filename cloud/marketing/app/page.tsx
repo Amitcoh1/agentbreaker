@@ -3,6 +3,7 @@ import Contact from "@/components/Contact";
 import CostForecast from "@/components/CostForecast";
 import FinalCta from "@/components/FinalCta";
 import Footer from "@/components/Footer";
+import Governance from "@/components/Governance";
 import Hero from "@/components/Hero";
 import HowItWorks from "@/components/HowItWorks";
 import Integration from "@/components/Integration";
@@ -40,6 +41,7 @@ export default function MarketingPage() {
       </main>
       <HowItWorks />
       <Pillars />
+      <Governance />
       <CostForecast />
       <Integration />
       <Compare />

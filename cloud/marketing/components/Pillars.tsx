@@ -67,6 +67,20 @@ export default function Pillars() {
             you compensate, not guess.
           </Pillar>
           <Pillar
+            title="Catches runaways"
+            icon={
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d4a017" strokeWidth="1.8" aria-hidden="true">
+                <path d="M20 12a8 8 0 1 1-2.3-5.6" strokeLinecap="round" />
+                <path d="M20 4v4h-4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            }
+          >
+            A loop spinning on near-identical calls trips before the budget pays for it — no LLM, just
+            fuzzy repeat detection. A live <code>$spent / $budget</code> counter climbs in your terminal
+            as it runs, and <code>max_depth</code> caps sub-agent nesting so a run can&apos;t spawn its
+            way around its own cap.
+          </Pillar>
+          <Pillar
             title="Code you own"
             icon={
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d4a017" strokeWidth="1.8" aria-hidden="true">

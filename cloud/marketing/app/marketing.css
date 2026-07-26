@@ -624,7 +624,7 @@ body:has(.mkt) { background: #0f1114; }
 .mkt .f3 h3 { font-family: var(--disp); font-weight: 600; font-size: 18px; margin-top: 16px; }
 .mkt .f3 p { font-size: 14.5px; color: var(--tx2); margin-top: 8px; }
 
-.mkt .pillars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 52px; }
+.mkt .pillars { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-top: 52px; }
 .mkt .pillar {
   background: var(--bg2);
   border: 1px solid var(--line);

@@ -22,6 +22,12 @@ def main(argv: list[str] | None = None) -> int:
     bld = sub.add_parser("build", help="generate guarded LangGraph Python from a spec")
     bld.add_argument("spec", help="path to a graph spec.json")
     bld.add_argument("-o", "--output", default=None, help="write .py here (default: stdout)")
+    bld.add_argument("-p", "--policy", default="breakerbox.yaml", help="policy file to enforce")
+    bld.add_argument("--no-policy", action="store_true", help="skip breakerbox.yaml enforcement")
+
+    pol = sub.add_parser("policy", help="check spec(s) against a breakerbox.yaml policy")
+    pol.add_argument("spec", nargs="+", help="spec(s) to check")
+    pol.add_argument("-p", "--policy", default="breakerbox.yaml", help="policy file")
 
     ceil = sub.add_parser("ceiling", help="print the provable worst-case cost ceiling of a spec")
     ceil.add_argument("spec", nargs="+", help="path(s) to graph spec.json file(s)")
@@ -77,6 +83,19 @@ def main(argv: list[str] | None = None) -> int:
             for e in result.errors:
                 print("ERROR:", e)
             return 1
+        if not args.no_policy:
+            from pathlib import Path
+
+            ppath = Path(args.policy)
+            if ppath.exists():
+                from breakerbox import policy as _policy
+
+                violations = _policy.check_policy(spec, _policy.load_policy(ppath))
+                if violations:
+                    for v in violations:
+                        print(f"POLICY VIOLATION {v.rule}: {v.message}")
+                    print(f"\nrefusing to emit — {args.policy} not satisfied.")
+                    return 1
         code = codegen.generate(spec)
         if args.output:
             from pathlib import Path
@@ -142,6 +161,26 @@ def main(argv: list[str] | None = None) -> int:
         msg, increased = budgetdiff.diff_ceiling(args.old, args.new)
         print(msg)
         return 1 if (args.fail_on_increase and increased) else 0
+    if args.command == "policy":
+        from pathlib import Path
+
+        from breakerbox import graphspec
+        from breakerbox import policy as _policy
+
+        if not Path(args.policy).exists():
+            print(f"no policy at {args.policy}")
+            return 1
+        pol = _policy.load_policy(args.policy)
+        failed = False
+        for sp in args.spec:
+            for v in _policy.check_policy(graphspec.load_spec(sp), pol):
+                print(f"VIOLATION [{sp}] {v.rule}: {v.message}")
+                failed = True
+        if failed:
+            print("\npolicy check failed.")
+            return 1
+        print(f"policy OK — {len(args.spec)} spec(s) comply with {args.policy}.")
+        return 0
     if args.command == "init":
         from pathlib import Path
 

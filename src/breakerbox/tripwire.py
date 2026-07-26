@@ -25,6 +25,7 @@ class TripReason(StrEnum):
     VELOCITY = "velocity"
     REMOTE = "remote"  # pause/kill issued from the cloud dashboard
     LOOP = "loop"  # near-identical repeat loop caught before the budget (#82)
+    DEPTH = "depth"  # sub-agent nesting exceeded max_depth (anti-evasion, #84)
 
 
 class Tripwire:

@@ -160,6 +160,12 @@ def _call_text(messages) -> str:
     return "\n".join(parts)
 
 
+def _call_depth(metadata) -> int:
+    """Sub-agent nesting depth of a hop from LangGraph's checkpoint namespace (1 = top level)."""
+    ns = (metadata or {}).get("langgraph_checkpoint_ns") or ""
+    return ns.count("|") + 1 if ns else 1
+
+
 class _BudgetHandler(BaseCallbackHandler):
     # raise_error=True makes our gate's _Trip propagate out of the model call
     # instead of being swallowed by the callback manager.
@@ -230,6 +236,11 @@ class _BudgetHandler(BaseCallbackHandler):
     def _start_call(self, run_id, parent, messages, serialized, metadata, kwargs):
         self._gate()
         node = (metadata or {}).get("langgraph_node") or _ROOT
+        # Depth cap: a run that nests sub-agents past max_depth trips before the hop (#84). The
+        # check runs in this guard-injected callback, outside any agent-controllable code.
+        if self._g.max_depth is not None and _call_depth(metadata) > self._g.max_depth:
+            self._run.tripwire.trip(TripReason.DEPTH)
+            self._trip(TripReason.DEPTH)
         # Loop check runs before the reserve so a runaway trips without paying for the hop (#82).
         if self._run.loop is not None and self._run.loop.observe(node, _call_text(messages)):
             self._run.tripwire.trip(TripReason.LOOP)
@@ -359,6 +370,7 @@ class GuardedApp:
         otel: bool,
         detect_loops: bool | dict,
         live: bool | Callable,
+        max_depth: int | None,
     ) -> None:
         if on_trip not in ("pause", "kill"):
             raise ValueError(f"on_trip must be pause|kill, got {on_trip!r}")
@@ -378,6 +390,7 @@ class GuardedApp:
         self.on_trip = on_trip
         self.detect_loops = detect_loops
         self.live = live
+        self.max_depth = max_depth
         # fail fast on a bad loop config at guard()-time, not mid-run
         make_detector(detect_loops)
         self.sub_budgets = sub_budgets or {}
@@ -563,9 +576,10 @@ def guard(
     otel: bool = False,
     detect_loops: bool | dict = False,
     live: bool | Callable = False,
+    max_depth: int | None = None,
 ) -> GuardedApp:
     return GuardedApp(
         app, budget_usd, max_hops, ttl_seconds, velocity_usd_per_min, on_trip,
         sub_budgets, topup_policy, unknown_model, report_dir, report_to, otel,
-        detect_loops, live,
+        detect_loops, live, max_depth,
     )

@@ -219,3 +219,50 @@ def test_live_true_prints_spend_line_to_stderr(tmp_path, capsys):
     guarded.invoke({"count": 0}, {"recursion_limit": 100})
     err = capsys.readouterr().err
     assert "[breakerbox]" in err and "/ $5.00" in err
+
+
+# --- #84 cross-subagent / depth budget tracking (anti-evasion) ---------------
+def _nest(app, levels: int):
+    """Wrap `app` as a subgraph node `levels` times → a model call at nesting depth levels+1."""
+    for _ in range(levels):
+        g = StateGraph(S)
+        g.add_node("sub", app)
+        g.add_edge(START, "sub")
+        g.add_edge("sub", END)
+        app = g.compile()
+    return app
+
+
+def test_call_depth_counts_subgraph_nesting():
+    from breakerbox.guard import _call_depth
+
+    assert _call_depth(None) == 1
+    assert _call_depth({}) == 1
+    assert _call_depth({"langgraph_checkpoint_ns": "call:abc"}) == 1
+    assert _call_depth({"langgraph_checkpoint_ns": "a:1|b:2|call:3"}) == 3
+
+
+def test_subagent_spend_is_metered_and_summed(tmp_path):
+    # a subgraph's 3 model calls all count toward the shared ledger — nesting doesn't hide spend.
+    guarded = guard(_nest(build(3), 1), budget_usd=100.0, on_trip="kill", report_dir=tmp_path)
+    guarded.invoke({"count": 0}, {"recursion_limit": 100})
+    assert _only_run(guarded).ledger.total_spent() == 3 * COST_PER_CALL
+
+
+def test_max_depth_trips_on_deep_nesting(tmp_path):
+    # the model call runs at nesting depth 3; max_depth=2 trips it before the hop.
+    guarded = guard(
+        _nest(build(1), 2), budget_usd=100.0, max_hops=100, on_trip="kill",
+        max_depth=2, report_dir=tmp_path,
+    )
+    with pytest.raises(BudgetKilled) as exc:
+        guarded.invoke({"count": 0}, {"recursion_limit": 100})
+    assert exc.value.reason == "depth"
+
+
+def test_deep_nesting_runs_without_max_depth(tmp_path):
+    # max_depth defaults off → nesting is allowed (opt-in, non-breaking).
+    out = guard(_nest(build(1), 2), budget_usd=100.0, on_trip="kill", report_dir=tmp_path).invoke(
+        {"count": 0}, {"recursion_limit": 100}
+    )
+    assert out["count"] == 1

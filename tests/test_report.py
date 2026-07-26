@@ -115,3 +115,14 @@ def test_no_tags_is_empty_and_omitted():
     s = summarize(_killed_events())
     assert s["tags"] == {}
     assert "tags:" not in render_terminal(s)
+
+
+def test_audit_and_blast_radius(tmp_path):
+    # #87: run receipt is an audit artifact with a blast-radius compensation checklist.
+    events = _killed_events()  # includes a side-effecting send_email tool_call + a trip
+    s = summarize(events)
+    assert s["started_at"] == "t" and s["run_id"] == "r1"
+    term = render_terminal(s)
+    assert "blast radius" in term and "☐ send_email" in term
+    html = render_html(s)
+    assert "Blast radius" in html and "send_email" in html and "audit · run r1" in html

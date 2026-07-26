@@ -32,6 +32,8 @@
  .se{color:var(--brass);font-weight:600}
  .warn{color:var(--muted);font-size:12px;font-style:italic}
  .tag{display:inline-block;font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 8px;margin-right:4px}
+ .blast{border:1px solid var(--brass);border-radius:8px;padding:10px 14px;margin:14px 0;background:rgba(184,134,11,.06)}
+ .blast ul{margin:6px 0 0 0;padding-left:20px}
  .foot{color:var(--muted);font-size:12px;margin-top:24px}
 </style></head>
 <body><div class="wrap">
@@ -39,6 +41,7 @@
    <h1>breakerbox receipt</h1>
    <span class="status s-{{ r.status }}">{{ r.status }}{% if r.trip_reason %} · {{ r.trip_reason }}{% endif %}</span>
  </div>
+ <div class="sub" style="opacity:.7">audit · run {{ r.run_id[:8] }}{% if r.started_at %} · {{ r.started_at }}{% endif %}</div>
 
  <div class="headline {{ r.status }}">
    <div class="big">stopped at <span class="stop">{{ r.spent_disp }}</span></div>
@@ -59,7 +62,10 @@
  </svg>
 
  {% if r.side_effects_fired %}
- <p class="se">⚠ Side-effecting tools fired before the trip: {{ r.side_effects_fired|join(', ') }}</p>
+ <div class="blast">
+   <p class="se">⚠ Blast radius — these side-effects already hit the world when the run stopped. Verify or compensate:</p>
+   <ul>{% for node in r.side_effects_fired %}<li>{{ node }}</li>{% endfor %}</ul>
+ </div>
  {% endif %}
 
  {% if r.has_overshoot %}

@@ -117,3 +117,25 @@ breakerbox build agent.spec.json --no-policy   # bypass
 ```
 
 `build` auto-detects `breakerbox.yaml` in the working directory; point elsewhere with `--policy`.
+
+## Egress certificate (airgap)
+
+A proxy *is* the egress — it can't attest to code it doesn't see. A static scan of the spec can
+certify the whole network surface: which model-provider endpoints the agent reaches.
+
+```bash
+breakerbox egress agent.spec.json            # prints the certificate
+breakerbox egress agent.spec.json --strict   # exit 1 on an undeclared egress (unknown provider)
+```
+
+```
+Egress certificate (static, from the spec):
+  model providers:
+    ✓ api.anthropic.com
+    ✓ api.openai.com
+  tools (egress is implementation-defined — see the node bodies):
+    · web_search
+```
+
+Model-provider hosts are derived from the model strings; an unknown provider is flagged, never
+hidden. Tool egress lives in the node bodies you fill in, so it's listed as implementation-defined.

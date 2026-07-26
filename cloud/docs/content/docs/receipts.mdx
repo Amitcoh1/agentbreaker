@@ -21,9 +21,10 @@ Every guarded run produces a **receipt** in three shapes:
 
 ## Honesty
 
-Token counts are self-metered (tiktoken) and then reconciled against the provider's reported
-usage, so the receipt reflects what actually happened — not an estimate. Prompts and keys are never
-part of the event stream.
+Token counts are self-metered per model family — exact tiktoken for OpenAI, a conservative
+o200k-based approximation for Anthropic/Google (whose exact tokenizers are API-only, which offline
+metering can't call) — then reconciled against the provider's reported usage, so the billed number
+reflects what actually happened, not an estimate. Prompts and keys are never part of the event stream.
 
 ## Audit artifact & blast radius
 

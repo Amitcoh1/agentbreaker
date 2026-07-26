@@ -16,23 +16,36 @@ _PER_MESSAGE_OVERHEAD = 4
 
 _ENCODERS: dict[str, tiktoken.Encoding] = {}
 
+# Per-family correction on the o200k baseline for models without an exact tiktoken tokenizer.
+# Exact offline tokenizers for these families aren't available (Anthropic/Google `count_tokens`
+# is an API call, which would break "no LLM in the hot path" + offline). These are conservative
+# approximations — they lean slightly HIGH so the reserve never under-counts a budget — and the
+# ACTUAL billed count is always reconciled against the provider's reported usage (#89).
+_FAMILY_FACTOR = {"anthropic": 1.15, "google": 1.1, "gemini": 1.1}
+
+
+def _family(model: str) -> str:
+    return model.split("/")[0].lower() if "/" in model else ""
+
+
+def _factor(model: str) -> float:
+    return _FAMILY_FACTOR.get(_family(model), 1.0)
+
 
 def _encoder(model: str) -> tiktoken.Encoding:
     name = model.split("/")[-1]
     enc = _ENCODERS.get(name)
     if enc is None:
         try:
-            enc = tiktoken.encoding_for_model(name)
+            enc = tiktoken.encoding_for_model(name)  # exact for OpenAI families
         except KeyError:
-            # ponytail: o200k_base is a close-enough approximation for non-OpenAI
-            # models; exact per-provider tokenizers can be added if drift matters.
-            enc = tiktoken.get_encoding("o200k_base")
+            enc = tiktoken.get_encoding("o200k_base")  # base for others; refined by _factor
         _ENCODERS[name] = enc
     return enc
 
 
 def count_text_tokens(text: str, model: str) -> int:
-    return len(_encoder(model).encode(text or ""))
+    return round(len(_encoder(model).encode(text or "")) * _factor(model))
 
 
 def _content_to_text(content: object) -> str:
@@ -52,10 +65,11 @@ def _content_to_text(content: object) -> str:
 def count_message_tokens(messages, model: str) -> int:
     """messages: iterable of BaseMessage-like (has .content) or plain strings."""
     enc = _encoder(model)
+    factor = _factor(model)
     total = 0
     for m in messages:
         content = getattr(m, "content", m)
-        total += len(enc.encode(_content_to_text(content))) + _PER_MESSAGE_OVERHEAD
+        total += round(len(enc.encode(_content_to_text(content))) * factor) + _PER_MESSAGE_OVERHEAD
     return total + 3  # priming
 
 

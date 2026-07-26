@@ -1,0 +1,62 @@
+---
+title: OpenTelemetry
+description: Stream guarded runs into any OTel-native observability backend — Phoenix, Arize, Langfuse — using GenAI semantic conventions. Optional and off by default.
+---
+
+Breakerbox can emit an OpenTelemetry trace per guarded run, using the **GenAI semantic conventions** —
+so it drops straight into Phoenix, Arize, Langfuse, or any OTLP backend with no custom mapping. It is
+**optional and off by default**: no telemetry leaves your process unless you opt in.
+
+## Enable it
+
+```bash
+pip install 'breakerbox[otel]'
+```
+
+```python
+app = guard(my_app, budget_usd=5.00, otel=True)
+```
+
+Breakerbox emits into the **global OTel tracer provider**, so you configure exporters the normal way —
+Breakerbox never talks to a backend itself. A typical OTLP setup:
+
+```python
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+provider = TracerProvider()
+provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint="http://localhost:4318/v1/traces")))
+trace.set_tracer_provider(provider)
+
+app = guard(my_app, budget_usd=5.00, otel=True)   # spans now flow to your collector
+```
+
+## What's emitted
+
+One `breakerbox.run` span per run, with a child span per model hop and per tool call:
+
+```
+breakerbox.run                     budget_usd, spent_usd, trip_reason
+├─ chat gpt-4o                     gen_ai.* + cost + node   (one per model hop)
+├─ chat claude-sonnet-4-6
+└─ execute_tool send_email         gen_ai.tool.name + side_effecting
+```
+
+| Span | Key attributes |
+|---|---|
+| `breakerbox.run` | `breakerbox.run_id`, `breakerbox.budget_usd`, `breakerbox.spent_usd`, `breakerbox.trip_reason` (when it tripped) |
+| `chat <model>` | `gen_ai.operation.name=chat`, `gen_ai.system` (provider), `gen_ai.request.model`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`, `breakerbox.cost_usd`, `breakerbox.node` |
+| `execute_tool <name>` | `gen_ai.operation.name=execute_tool`, `gen_ai.tool.name`, `breakerbox.side_effecting` |
+
+Model-hop and tool spans are children of the run span, so a trace shows the full shape of the run —
+which node spent what, whether a side-effecting tool fired, and why the run stopped.
+
+## Notes
+
+- **Off by default.** Without `otel=True`, nothing is emitted — local-first is preserved.
+- **You own the exporter.** Breakerbox emits into the global tracer provider; where the spans go is
+  your OTel configuration, not ours.
+- The `[otel]` extra pulls only `opentelemetry-api`; bring your own SDK/exporter for whatever backend
+  you use.

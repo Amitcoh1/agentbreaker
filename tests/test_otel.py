@@ -13,7 +13,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
-from breakerbox import guard, mark_side_effecting
+from breakerbox import BudgetKilled, guard, mark_side_effecting
 
 MODEL = "openai/gpt-4o"
 
@@ -136,3 +136,13 @@ def test_tool_span(spans, tmp_path):
     assert a["gen_ai.operation.name"] == "execute_tool"
     assert a["gen_ai.tool.name"] == "send_email"
     assert a["breakerbox.side_effecting"] is True
+
+
+def test_trip_reason_on_run_span(spans, tmp_path):
+    guarded = guard(
+        _build(50), budget_usd=100.0, max_hops=2, on_trip="kill", report_dir=tmp_path, otel=True
+    )
+    with pytest.raises(BudgetKilled):
+        guarded.invoke({"count": 0}, {"recursion_limit": 100})
+    run_span = _by_name(spans.get_finished_spans())["breakerbox.run"][0]
+    assert dict(run_span.attributes)["breakerbox.trip_reason"] == "hops"

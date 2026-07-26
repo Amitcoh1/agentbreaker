@@ -504,7 +504,8 @@ class GuardedApp:
         if run.control is not None:
             run.control.stop()
         if self._otel is not None and run.otel_run_span is not None:
-            self._otel.end_run(run.otel_run_span, run.ledger.total_spent())
+            reason = run.tripwire.reason.value if run.tripwire.reason else None
+            self._otel.end_run(run.otel_run_span, run.ledger.total_spent(), trip_reason=reason)
         html_path, summary = write_report(run.run_id, run.eventlog.path, self.report_dir)
         run.report_path = html_path
         self.last_report_path = html_path

@@ -35,8 +35,9 @@ exactly where the money went. In the [bundled demo](#the-demo), a runaway retry 
 1. **Zero attack surface — codegen only.** No endpoint ever executes your flows; no provider
    key is ever stored or transmitted. There's nothing on our side to compromise. (See
    [Why no Run button?](#why-no-run-button))
-2. **Budget-first.** The only builder where hierarchical budget escrow, trip rules, and
-   side-effect tagging are part of the canvas itself.
+2. **Provable, not just observed.** The only tool that proves your agent's *maximum* cost
+   before it runs. Budget escrow, a static cost ceiling, runaway guards, and policy-as-code are
+   part of the artifact — not a dashboard you read after the money's gone.
 3. **Code you own.** The output is readable, hand-editable Python — scaffolding, not a walled
    garden.
 
@@ -50,6 +51,7 @@ exactly where the money went. In the [bundled demo](#the-demo), a runaway retry 
 - [What it actually does](#what-it-actually-does)
 - [Build it visually](#build-it-visually)
 - [Gate cost in CI](#gate-cost-in-ci)
+- [More than a budget: cost governance](#more-than-a-budget-cost-governance)
 - [Why no Run button?](#why-no-run-button)
 - [How it compares](#how-it-compares-facts-only)
 - [Notes & limitations](#notes--limitations-read-before-you-rely-on-it)
@@ -189,6 +191,39 @@ Same check locally or in any pipeline — `breakerbox ceiling specs/*.spec.json 
 when over-limit or unbounded. See [CI budget gate](https://docs-rosy-sigma.vercel.app/docs/ci-gate).
 
 > Needs `breakerbox >= 0.6.0` (the release that ships `breakerbox ceiling`).
+
+## More than a budget: cost governance
+
+Because cost is **static and deterministic**, Breakerbox can do things an observe-after-the-fact
+dashboard or a gateway/proxy structurally can't. Everything here is local — no server, no stored
+keys, no LLM in the loop.
+
+**Prove & pin the cost**
+
+- **`breakerbox ceiling`** — a *provable* worst-case dollar bound, computed with zero API calls, and
+  baked into the header of the generated Python so the proof travels with the code.
+- **`breakerbox lock` / `--check`** — pin the price table + each spec's ceiling to `breakerbox.lock`;
+  CI fails on drift. `package-lock.json`, for dollars.
+- **`breakerbox diff`** — the ceiling delta between two versions; `--fail-on-increase` reddens a PR
+  that quietly raises your ceiling from $2 to $9.
+
+**Catch runaways before the bill**
+
+- **`detect_loops`** — trips on near-identical repeats *before* the budget (no LLM; paraphrase-resistant).
+- **`live=True`** — a real-time `$spent / $budget` counter in your terminal, so you watch it climb
+  instead of finding out from the invoice.
+- **`max_depth`** — cap sub-agent nesting so a run can't spawn its way around its own cap.
+- **`alerts`** — a graduated warn rail (50/80/95%) before the hard trip.
+
+**Govern & attribute**
+
+- **`breakerbox.yaml`** — policy-as-code the build **refuses to violate** (max ceiling, `max_hops`,
+  banned models, no destructive tools). A precondition of the artifact, not removable server config.
+- **`breakerbox egress`** — certify exactly which network endpoints the generated code can reach.
+- **`tags={"team": ...}`** — per-team/customer/env chargeback on every receipt.
+- **The receipt is an audit artifact** — who/what/how-much/when, plus a **blast-radius** compensation
+  checklist of side-effecting tools that fired before a trip.
+- **`otel=True`** — GenAI-semantic-convention spans into Phoenix / Arize / Langfuse.
 
 ## Why no Run button?
 

@@ -29,6 +29,11 @@ def main(argv: list[str] | None = None) -> int:
     pol.add_argument("spec", nargs="+", help="spec(s) to check")
     pol.add_argument("-p", "--policy", default="breakerbox.yaml", help="policy file")
 
+    egr = sub.add_parser("egress", help="certify the network endpoints a spec can reach")
+    egr.add_argument("spec", help="path to a graph spec.json")
+    egr.add_argument("--strict", action="store_true", help="exit 1 on an undeclared model egress")
+    egr.add_argument("--json", action="store_true", help="machine-readable output")
+
     ceil = sub.add_parser("ceiling", help="print the provable worst-case cost ceiling of a spec")
     ceil.add_argument("spec", nargs="+", help="path(s) to graph spec.json file(s)")
     ceil.add_argument(
@@ -181,6 +186,18 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(f"policy OK — {len(args.spec)} spec(s) comply with {args.policy}.")
         return 0
+    if args.command == "egress":
+        from breakerbox import egress as _egress
+        from breakerbox import graphspec
+
+        e = _egress.certify(graphspec.load_spec(args.spec))
+        if args.json:
+            import json as _json
+
+            print(_json.dumps(e.__dict__))
+        else:
+            print(_egress.format_certificate(e))
+        return 1 if (args.strict and e.unknown_models) else 0
     if args.command == "init":
         from pathlib import Path
 

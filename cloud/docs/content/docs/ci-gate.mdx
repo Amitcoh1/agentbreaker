@@ -93,3 +93,27 @@ exits 1 when the ceiling rose or lost its bound, so a cost regression turns the 
 - **`breakerbox ceiling` needs ≥ 0.6.0.** The action installs it from PyPI; pin `breakerbox-version`
   if you want a fixed version.
 - The action requires you to `actions/checkout` first — it reads your specs from the workspace.
+
+## Policy as code
+
+A committed `breakerbox.yaml` sets rules that `breakerbox build` enforces **at generation time** — a
+non-compliant graph won't emit. Unlike a server config you can toggle off, the policy is a
+precondition of the artifact existing.
+
+```yaml
+# breakerbox.yaml
+max_ceiling_usd: 5.00      # the provable worst-case ceiling must be ≤ this
+max_node_cost_usd: 1.00    # no single model hop may cost more ("no node > $1")
+max_hops: 20               # config.max_hops must be set and ≤ this
+require_bounded: true      # refuse unbounded loops (no max_hops)
+banned_models: ["openai/o1"]
+allow_destructive: false   # refuse graphs containing destructive-class tools
+```
+
+```bash
+breakerbox policy specs/*.spec.json     # check (exit 1 on any violation)
+breakerbox build agent.spec.json        # refuses to emit if breakerbox.yaml isn't satisfied
+breakerbox build agent.spec.json --no-policy   # bypass
+```
+
+`build` auto-detects `breakerbox.yaml` in the working directory; point elsewhere with `--policy`.

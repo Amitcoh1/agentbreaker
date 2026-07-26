@@ -2,11 +2,12 @@
 //
 //   GET  ?run_id=...   the library polls; returns the oldest pending command and marks it
 //                      applied. Auth: x-ingest-key (the library is trusted).
-//   POST {run_id, command}   the dashboard issues pause|kill. Auth: x-control-key, so a
-//                            public/unlisted run URL can't be used to kill an agent.
+//   POST {run_id, command}   the dashboard (owner session) or CLI issues pause|kill. Auth: the
+//                            owner's session token, or x-control-key matching the run's per-run
+//                            control-key hash (#45) — never a global master key.
 //
 // Deploy:  supabase functions deploy control --no-verify-jwt
-// Secrets: INGEST_KEY, CONTROL_KEY, SERVICE_ROLE_KEY, PROJECT_URL
+// Secrets: INGEST_KEY, SERVICE_ROLE_KEY, PROJECT_URL
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { allow, clientIp } from "../_shared/throttle.ts";
@@ -15,7 +16,6 @@ const PROJECT_URL = Deno.env.get("PROJECT_URL") ?? Deno.env.get("SUPABASE_URL")!
 const SERVICE_ROLE_KEY =
   Deno.env.get("SERVICE_ROLE_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const INGEST_KEY = Deno.env.get("INGEST_KEY");
-const CONTROL_KEY = Deno.env.get("CONTROL_KEY");
 
 const supabase = createClient(PROJECT_URL, SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
@@ -41,6 +41,13 @@ function ctEq(a: string, b: string): boolean {
   let diff = 0;
   for (let i = 0; i < ea.length; i++) diff |= ea[i] ^ eb[i];
   return diff === 0;
+}
+
+async function sha256Hex(s: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 Deno.serve(async (req) => {
@@ -91,12 +98,12 @@ Deno.serve(async (req) => {
       return json({ error: "run_id and command (pause|kill) required" }, 400);
     }
 
-    // Resolve the run's owner once. The session-token path must match it; the global
-    // CONTROL_KEY may only act on unowned (public) runs — it must never override the owner
-    // of a private run, who controls it via their session.
+    // Resolve the run's owner + per-run control-key hash once. The session-token path must match the
+    // owner; a non-owner caller is authorized only by presenting the key whose hash was stored for
+    // THIS run at ingest (#45) — so a leaked key can never act as a global master kill switch.
     const { data: runRow } = await supabase
       .from("runs")
-      .select("owner_id")
+      .select("owner_id, control_key_hash")
       .eq("run_id", body.run_id)
       .maybeSingle();
 
@@ -109,15 +116,12 @@ Deno.serve(async (req) => {
       } = await supabase.auth.getUser(token);
       if (user && runRow && runRow.owner_id === user.id) authorized = true;
     }
-    if (
-      !authorized &&
-      CONTROL_KEY &&
-      !runRow?.owner_id &&
-      ctEq(req.headers.get("x-control-key") ?? "", CONTROL_KEY)
-    ) {
-      // ponytail: global key limited to public runs; a per-run control-key hash is the proper
-      // upgrade for private-run CLI control (tracked as a follow-up issue).
-      authorized = true;
+    if (!authorized && runRow?.control_key_hash) {
+      // Per-run control key: authorize iff the presented key hashes to the one stored for this run.
+      const presented = req.headers.get("x-control-key") ?? "";
+      if (presented && ctEq(await sha256Hex(presented), runRow.control_key_hash)) {
+        authorized = true;
+      }
     }
     if (!authorized) return json({ error: "unauthorized" }, 401);
 

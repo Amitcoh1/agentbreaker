@@ -110,13 +110,18 @@ Deno.serve(async (req) => {
     return new Response("too many events", { status: 413 });
   }
 
+  // Per-run control key (#45): store only its SHA-256 hash, set on the run's first sighting so the
+  // `control` endpoint can authorize non-owner CLI pause/kill against this run alone.
+  const controlKey = req.headers.get("x-control-key") ?? "";
+  const controlKeyHash = controlKey ? await sha256Hex(controlKey) : null;
+
   // Create the parent run row on first sighting, stamped with its owner. Owned runs are private by
   // default (public=false); anonymous/legacy runs stay public (shareable link). ignoreDuplicates
   // keeps the original owner/visibility on later batches.
   await supabase
     .from("runs")
     .upsert(
-      { run_id, owner_id: ownerId, public: ownerId === null },
+      { run_id, owner_id: ownerId, public: ownerId === null, control_key_hash: controlKeyHash },
       { onConflict: "run_id", ignoreDuplicates: true },
     );
 

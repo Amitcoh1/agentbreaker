@@ -78,3 +78,34 @@ def test_report_to_posts_events_and_summary(tmp_path):
     assert all(body["run_id"] for body in captured)
     summaries = [body["summary"] for body in captured if body.get("summary")]
     assert summaries and summaries[-1]["status"] == "completed"
+
+
+def test_control_key_sent_as_x_control_key_header(tmp_path):
+    # #45: guard(control_key=...) is presented at ingest so its hash can be stored per-run.
+    seen: list[str | None] = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            length = int(self.headers.get("Content-Length", 0))
+            self.rfile.read(length)
+            seen.append(self.headers.get("x-control-key"))
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"{}")
+
+        def log_message(self, *args):
+            pass
+
+    server = HTTPServer(("127.0.0.1", 0), Handler)
+    port = server.server_address[1]
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        guarded = guard(
+            _build(1), budget_usd=100.0, on_trip="kill", report_dir=tmp_path,
+            report_to=f"http://127.0.0.1:{port}/ingest", control_key="ctrl-secret-123",
+        )
+        guarded.invoke({"count": 0})
+    finally:
+        server.shutdown()
+
+    assert seen and all(h == "ctrl-secret-123" for h in seen)

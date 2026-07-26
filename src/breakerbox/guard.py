@@ -419,6 +419,7 @@ class GuardedApp:
         max_depth: int | None,
         alerts: bool | dict | Callable,
         tags: dict | None,
+        control_key: str | None,
     ) -> None:
         if on_trip not in ("pause", "kill"):
             raise ValueError(f"on_trip must be pause|kill, got {on_trip!r}")
@@ -442,6 +443,8 @@ class GuardedApp:
         self.alerts = alerts
         self._alert_thresholds, self._alert_fn = _parse_alerts(alerts)
         self.tags = {str(k): str(v) for k, v in (tags or {}).items()}  # #85 attribution tags
+        # #45 per-run control key: env fallback mirrors BREAKERBOX_INGEST_KEY.
+        self.control_key = control_key or os.getenv("BREAKERBOX_CONTROL_KEY")
         # fail fast on a bad loop config at guard()-time, not mid-run
         make_detector(detect_loops)
         self.sub_budgets = sub_budgets or {}
@@ -545,7 +548,8 @@ class GuardedApp:
         sink = None
         if self.report_to:
             sink = HttpEventSink(
-                self.report_to, key=os.getenv("BREAKERBOX_INGEST_KEY"), run_id=run_id
+                self.report_to, key=os.getenv("BREAKERBOX_INGEST_KEY"), run_id=run_id,
+                control_key=self.control_key,
             )
         eventlog = EventLog(
             run_id,
@@ -632,9 +636,10 @@ def guard(
     max_depth: int | None = None,
     alerts: bool | dict | Callable = False,
     tags: dict | None = None,
+    control_key: str | None = None,
 ) -> GuardedApp:
     return GuardedApp(
         app, budget_usd, max_hops, ttl_seconds, velocity_usd_per_min, on_trip,
         sub_budgets, topup_policy, unknown_model, report_dir, report_to, otel,
-        detect_loops, live, max_depth, alerts, tags,
+        detect_loops, live, max_depth, alerts, tags, control_key,
     )

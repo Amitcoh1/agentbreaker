@@ -40,6 +40,13 @@ def main(argv: list[str] | None = None) -> int:
     lck.add_argument("--check", action="store_true", help="fail if prices or a ceiling drifted")
     lck.add_argument("-f", "--file", default="breakerbox.lock", help="lockfile path")
 
+    dff = sub.add_parser("diff", help="ceiling delta between two files (spec.json or .py)")
+    dff.add_argument("old", help="old spec.json or generated .py")
+    dff.add_argument("new", help="new spec.json or generated .py")
+    dff.add_argument(
+        "--fail-on-increase", action="store_true", help="exit 1 if the ceiling rose/lost its bound"
+    )
+
     ini = sub.add_parser("init", help="scaffold a guarded starter from a template")
     ini.add_argument("-t", "--template", default=None, help="template name (see --list)")
     ini.add_argument("--list", action="store_true", help="list available templates")
@@ -129,6 +136,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"wrote {args.file} — pinned {len(lock['specs'])} spec(s) "
               f"at price table {lock['price_table_version']}.")
         return 0
+    if args.command == "diff":
+        from breakerbox import budgetdiff
+
+        msg, increased = budgetdiff.diff_ceiling(args.old, args.new)
+        print(msg)
+        return 1 if (args.fail_on_increase and increased) else 0
     if args.command == "init":
         from pathlib import Path
 

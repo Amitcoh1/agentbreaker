@@ -70,6 +70,21 @@ reports each drift — a price-table bump, a changed ceiling, or a missing spec 
 never land silently. This is only meaningful because the ceiling is static and deterministic; runtime
 spend has nothing stable to lock.
 
+## Budget diff
+
+See the ceiling change in a pull request — *"this prompt edit raised your ceiling from $2 to $9"* —
+where runtime tools are blind (the invoice only moves weeks later):
+
+```bash
+breakerbox diff old.spec.json new.spec.json
+git show HEAD~1:agent.py > /tmp/old.py                        # git-native: grab the prior version
+breakerbox diff /tmp/old.py agent.py --fail-on-increase       # fails the PR on a rise
+```
+
+It reads the ceiling from either input — a spec (recomputed) or a generated `.py` (parsed from the
+header #79 bakes in) — and prints `Cost ceiling: $2.00 → $9.00 (+$7.00, +350%)`. `--fail-on-increase`
+exits 1 when the ceiling rose or lost its bound, so a cost regression turns the PR red.
+
 ## Notes
 
 - **The ceiling is a bound, not an estimate.** Unlike the [cost forecast](/docs/cost-forecast) (a

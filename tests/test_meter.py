@@ -40,3 +40,29 @@ def test_reconcile_without_provider_uses_local():
     billed_in, billed_out, flags = reconcile_usage(100, 50, None, None)
     assert (billed_in, billed_out) == (100, 50)
     assert flags == {}
+
+
+def test_per_family_tokenizer_factor():
+    # #89: per-family token accounting — OpenAI exact, non-OpenAI o200k × a conservative factor.
+    import tiktoken
+
+    from breakerbox.meter import _factor
+
+    assert _factor("openai/gpt-4o") == 1.0
+    assert _factor("anthropic/claude-sonnet-4-6") == 1.15
+    assert _factor("google/gemini-2.0") == 1.1
+    assert _factor("mistral/mixtral") == 1.0  # graceful fallback for unknown families
+    assert _factor("bare-model-name") == 1.0
+
+    text = "The quick brown fox jumps over the lazy dog. " * 8
+    base = len(tiktoken.get_encoding("o200k_base").encode(text))
+    claude, gpt = "anthropic/claude-sonnet-4-6", "openai/gpt-4o"
+    # Anthropic count = o200k baseline × its family factor (leans high, safe for a budget).
+    assert count_text_tokens(text, claude) == round(base * 1.15)
+    assert count_text_tokens(text, claude) > count_text_tokens(text, gpt)
+
+
+def test_message_tokens_apply_family_factor():
+    msgs = [HumanMessage(content="Summarize the quarterly report in three tight bullet points.")]
+    claude, gpt = "anthropic/claude-sonnet-4-6", "openai/gpt-4o"
+    assert count_message_tokens(msgs, claude) > count_message_tokens(msgs, gpt)

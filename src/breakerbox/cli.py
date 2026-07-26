@@ -33,6 +33,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     ceil.add_argument("--json", action="store_true", help="machine-readable output")
 
+    lck = sub.add_parser(
+        "lock", help="pin the price table + ceiling to breakerbox.lock; --check for CI drift"
+    )
+    lck.add_argument("spec", nargs="*", help="spec(s) to lock (omit with --check)")
+    lck.add_argument("--check", action="store_true", help="fail if prices or a ceiling drifted")
+    lck.add_argument("-f", "--file", default="breakerbox.lock", help="lockfile path")
+
     ini = sub.add_parser("init", help="scaffold a guarded starter from a template")
     ini.add_argument("-t", "--template", default=None, help="template name (see --list)")
     ini.add_argument("--list", action="store_true", help="list available templates")
@@ -96,6 +103,32 @@ def main(argv: list[str] | None = None) -> int:
             if not args.json and multi and idx < len(args.spec) - 1:
                 print()
         return 1 if failed else 0
+    if args.command == "lock":
+        import json as _json
+        from pathlib import Path
+
+        from breakerbox import lockfile
+
+        lock_path = Path(args.file)
+        if args.check:
+            if not lock_path.exists():
+                print(f"no lockfile at {args.file} — run `breakerbox lock <spec>...` first")
+                return 1
+            drifts = lockfile.check_lock(_json.loads(lock_path.read_text()))
+            for d in drifts:
+                print(f"DRIFT: {d.message}")
+            if drifts:
+                print(f"\n{len(drifts)} drift(s) — re-pin with `breakerbox lock <spec>...`.")
+                return 1
+            print(f"{args.file}: up to date.")
+            return 0
+        if not args.spec:
+            parser.error("lock needs spec path(s), or --check to verify an existing lockfile")
+        lock = lockfile.build_lock(args.spec)
+        lock_path.write_text(_json.dumps(lock, indent=2) + "\n")
+        print(f"wrote {args.file} — pinned {len(lock['specs'])} spec(s) "
+              f"at price table {lock['price_table_version']}.")
+        return 0
     if args.command == "init":
         from pathlib import Path
 

@@ -23,6 +23,10 @@ inputs:
     description: "pip version specifier for breakerbox, e.g. '>=0.6.0' or '==0.6.0'. `breakerbox ceiling` needs >= 0.6.0."
     required: false
     default: ">=0.6.0"
+  comment:
+    description: "Post the ceiling proof as a sticky PR comment. Needs `permissions: pull-requests: write`."
+    required: false
+    default: "false"
 
 runs:
   using: "composite"
@@ -47,3 +51,19 @@ runs:
         cat /tmp/breakerbox_ceiling.txt >> "$GITHUB_STEP_SUMMARY"
         printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
         exit "$code"
+    # Post the proof to the PR (even when the gate fails — that's when you want it). Sticky:
+    # edits our previous comment if present, otherwise creates one.
+    - if: always() && inputs.comment == 'true' && github.event_name == 'pull_request'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+      run: |
+        {
+          echo '### Breakerbox cost ceiling'
+          echo '```text'
+          cat /tmp/breakerbox_ceiling.txt 2>/dev/null || echo '(no output)'
+          echo '```'
+        } > /tmp/bb_comment.md
+        gh pr comment "$PR_NUMBER" --edit-last --body-file /tmp/bb_comment.md 2>/dev/null \
+          || gh pr comment "$PR_NUMBER" --body-file /tmp/bb_comment.md

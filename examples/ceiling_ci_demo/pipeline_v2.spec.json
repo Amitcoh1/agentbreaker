@@ -1,0 +1,59 @@
+{
+  "version": "1",
+  "config": {
+    "budget_usd": 20.0,
+    "max_hops": 55,
+    "on_trip": "kill"
+  },
+  "nodes": [
+    {
+      "id": "start",
+      "type": "start"
+    },
+    {
+      "id": "researcher",
+      "type": "model",
+      "model": "openai/gpt-4o",
+      "max_tokens": 16384
+    },
+    {
+      "id": "search",
+      "type": "tool",
+      "name": "web_search",
+      "side_effect_class": "read"
+    },
+    {
+      "id": "review",
+      "type": "router",
+      "condition": "good_enough"
+    },
+    {
+      "id": "end",
+      "type": "end"
+    }
+  ],
+  "edges": [
+    {
+      "source": "start",
+      "target": "researcher"
+    },
+    {
+      "source": "researcher",
+      "target": "search"
+    },
+    {
+      "source": "search",
+      "target": "review"
+    },
+    {
+      "source": "review",
+      "target": "researcher",
+      "condition": "retry"
+    },
+    {
+      "source": "review",
+      "target": "end",
+      "condition": "done"
+    }
+  ]
+}

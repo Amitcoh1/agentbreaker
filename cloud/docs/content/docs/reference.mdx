@@ -23,6 +23,7 @@ app = guard(
     detect_loops=False,    # True | {window, threshold, repeats}
     live=False,            # True prints a live $-spent line; or pass a callback
     max_depth=None,        # cap sub-agent nesting depth (anti-evasion)
+    alerts=False,          # True | {thresholds, on_alert} — warn before the kill
 )
 ```
 
@@ -47,6 +48,7 @@ app = guard(
 | `detect_loops` | `bool \| dict` | `False` | Semantic loop detection: trip (reason `loop`) when a node keeps re-firing with near-identical input — before the budget does, cheaper and faster. No LLM (character-shingle Jaccard). `True` uses defaults; pass a dict to tune `{window, threshold, repeats}`. Opt-in. |
 | `live` | `bool \| Callable` | `False` | Real-time spend counter. `True` prints a live `$spent / $budget` line to stderr as each hop reconciles (in-place on a TTY). Pass a callback `fn({"spent_usd", "budget_usd", "hops"})` to render it yourself. Local only, no server. Opt-in. |
 | `max_depth` | `int \| None` | `None` | Cap sub-agent nesting depth (trip reason `depth`). A run that spawns sub-agents/subgraphs deeper than this trips — checked in the guard-injected callback, outside agent-controllable code, so an adversarial agent can't route around it. Spend is already shared across all nesting levels; this adds a structural cap. Top-level calls are depth 1. |
+| `alerts` | `bool \| dict \| Callable` | `False` | Graduated **warn-before-kill** rail. As spend crosses budget thresholds it fires once each — before the hard trip. `True` uses `[0.5, 0.8, 0.95]` and logs to stderr; pass a callback `fn({"threshold", "pct", "spent_usd", "budget_usd"})`, or a dict `{"thresholds": [...], "on_alert": fn}` to tune. Local-first, opt-in. |
 
 ## When a budget trips
 

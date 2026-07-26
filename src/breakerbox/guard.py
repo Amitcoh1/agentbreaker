@@ -112,6 +112,7 @@ class _Run:
     control: ControlPoller | None = None
     remote_action: str | None = None  # "pause" | "kill" from the dashboard
     loop: LoopDetector | None = None  # #82 semantic loop detector, when detect_loops is on
+    alerted: set[float] = field(default_factory=set)  # #90 budget thresholds already warned
     calls: dict[str, _Call] = field(default_factory=dict)
     side_effect_fired: list[str] = field(default_factory=list)
     otel_run_span: object | None = None  # parent run span, when otel=True
@@ -164,6 +165,24 @@ def _call_depth(metadata) -> int:
     """Sub-agent nesting depth of a hop from LangGraph's checkpoint namespace (1 = top level)."""
     ns = (metadata or {}).get("langgraph_checkpoint_ns") or ""
     return ns.count("|") + 1 if ns else 1
+
+
+_DEFAULT_ALERT_THRESHOLDS = (0.5, 0.8, 0.95)
+
+
+def _parse_alerts(alerts) -> tuple[list[float], object]:
+    """Resolve the `alerts` config (#90) to (sorted thresholds, callback|None). Off → ([], None)."""
+    if not alerts:
+        return [], None
+    if alerts is True:
+        return list(_DEFAULT_ALERT_THRESHOLDS), None
+    if callable(alerts):
+        return list(_DEFAULT_ALERT_THRESHOLDS), alerts
+    thresholds = alerts.get("thresholds", _DEFAULT_ALERT_THRESHOLDS)
+    for t in thresholds:
+        if not 0.0 < t <= 1.0:
+            raise ValueError(f"alert threshold must be in (0, 1], got {t}")
+    return sorted(thresholds), alerts.get("on_alert")
 
 
 class _BudgetHandler(BaseCallbackHandler):
@@ -220,6 +239,32 @@ class _BudgetHandler(BaseCallbackHandler):
             print(f"\r{line}\033[K", end="", file=sys.stderr, flush=True)
         else:
             print(line, file=sys.stderr, flush=True)
+
+    def _check_alerts(self) -> None:
+        """#90: fire a warn callback/log as spend crosses each budget threshold — once each."""
+        thresholds = self._g._alert_thresholds
+        budget = self._g.budget_micro
+        if not thresholds or budget <= 0:
+            return
+        frac = self._run.ledger.total_spent() / budget
+        for t in thresholds:
+            if frac >= t and t not in self._run.alerted:
+                self._run.alerted.add(t)
+                payload = {
+                    "threshold": t,
+                    "pct": round(frac * 100, 1),
+                    "spent_usd": self._run.ledger.total_spent() / 1_000_000,
+                    "budget_usd": budget / 1_000_000,
+                }
+                self._run.eventlog.emit("alert", detail=payload)
+                if self._g._alert_fn is not None:
+                    self._g._alert_fn(payload)
+                else:
+                    print(
+                        f"[breakerbox] ⚠ {int(t * 100)}% of budget spent "
+                        f"(${payload['spent_usd']:.4f} / ${payload['budget_usd']:.2f})",
+                        file=sys.stderr, flush=True,
+                    )
 
     # ---- model calls ----
     def on_chat_model_start(self, serialized, messages, *, run_id, parent_run_id=None,
@@ -313,6 +358,7 @@ class _BudgetHandler(BaseCallbackHandler):
             cumulative_microusd=led.total_spent(), detail=detail,
         )
         self._emit_live()
+        self._check_alerts()
         if call.span is not None:
             self._g._otel.end_hop(call.span, final_in, final_out, actual)
         # soft check: velocity/budget crossed -> mark tripped, enforced at NEXT gate
@@ -371,6 +417,7 @@ class GuardedApp:
         detect_loops: bool | dict,
         live: bool | Callable,
         max_depth: int | None,
+        alerts: bool | dict | Callable,
     ) -> None:
         if on_trip not in ("pause", "kill"):
             raise ValueError(f"on_trip must be pause|kill, got {on_trip!r}")
@@ -391,6 +438,8 @@ class GuardedApp:
         self.detect_loops = detect_loops
         self.live = live
         self.max_depth = max_depth
+        self.alerts = alerts
+        self._alert_thresholds, self._alert_fn = _parse_alerts(alerts)
         # fail fast on a bad loop config at guard()-time, not mid-run
         make_detector(detect_loops)
         self.sub_budgets = sub_budgets or {}
@@ -577,9 +626,10 @@ def guard(
     detect_loops: bool | dict = False,
     live: bool | Callable = False,
     max_depth: int | None = None,
+    alerts: bool | dict | Callable = False,
 ) -> GuardedApp:
     return GuardedApp(
         app, budget_usd, max_hops, ttl_seconds, velocity_usd_per_min, on_trip,
         sub_budgets, topup_policy, unknown_model, report_dir, report_to, otel,
-        detect_loops, live, max_depth,
+        detect_loops, live, max_depth, alerts,
     )

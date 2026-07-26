@@ -101,14 +101,15 @@ export default function RunControls({ run, events }: { run: Run; events: RunEven
             <KeyRound className="h-4 w-4 text-muted" /> Control key
           </div>
           <p className="mb-3 text-xs text-muted">
-            Optional — only needed to control a run you don&apos;t own. Stored only in this browser
-            (localStorage).
+            Optional — only needed to control a run you don&apos;t own: the per-run{" "}
+            <code className="text-fg">control_key</code> set on <code className="text-fg">guard()</code>.
+            Stored only in this browser (localStorage).
           </p>
           <input
             type="password"
             value={key}
             onChange={(e) => saveKey(e.target.value)}
-            placeholder="CONTROL_KEY"
+            placeholder="this run's control_key"
             className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-ink"
           />
         </div>

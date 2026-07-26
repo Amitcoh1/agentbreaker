@@ -104,8 +104,8 @@ export default function SettingsPage() {
           <KeyRound className="h-4 w-4" /> Run control key
         </div>
         <p className="text-xs text-muted">
-          Required to pause/kill a running agent from the Controls tab of a run — the{" "}
-          <code className="text-fg">CONTROL_KEY</code> you configured on the guard.
+          Required to pause/kill a running agent from the Controls tab of a run — the per-run{" "}
+          <code className="text-fg">control_key</code> you set on <code className="text-fg">guard()</code>.
         </p>
         <label className="block">
           <span className="text-xs text-muted">control key</span>
@@ -115,7 +115,7 @@ export default function SettingsPage() {
             className={INPUT}
             value={controlKey}
             onChange={(e) => setKey(e.target.value)}
-            placeholder="CONTROL_KEY"
+            placeholder="this run's control_key"
           />
         </label>
       </section>

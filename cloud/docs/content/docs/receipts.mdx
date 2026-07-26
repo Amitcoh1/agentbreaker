@@ -24,3 +24,19 @@ Every guarded run produces a **receipt** in three shapes:
 Token counts are self-metered (tiktoken) and then reconciled against the provider's reported
 usage, so the receipt reflects what actually happened — not an estimate. Prompts and keys are never
 part of the event stream.
+
+## Audit artifact & blast radius
+
+Every receipt is an audit artifact: it carries the `run_id`, the start timestamp, the attribution
+[tags](/docs/reference) (team/customer/env), and exactly what was spent — offline, owned, no backend.
+
+When a run trips with side-effecting tools already fired, the receipt leads with a **blast radius**
+block — a compensation checklist of what hit the world before the stop:
+
+```
+ ⚠ blast radius — these side-effects already fired, verify/compensate:
+     ☐ send_email
+     ☐ post_to_cms
+```
+
+"If it stopped mid-run, what did it do to the world?" — answered in the artifact, not a war-room.

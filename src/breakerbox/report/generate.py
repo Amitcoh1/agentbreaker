@@ -94,6 +94,7 @@ def summarize(events: list[dict]) -> dict:
     overshoot_hops = sum(1 for t in timeline if t.get("overshoot"))
     return {
         "run_id": events[0]["run_id"] if events else "",
+        "started_at": events[0].get("ts") if events else None,  # #87 audit: when
         "status": status,
         "trip_reason": trip_reason,
         "hops": len(timeline),
@@ -149,8 +150,13 @@ def render_terminal(summary: dict) -> str:
             f" ⚠ {r['overshoot_hops']} hop(s): cap enforced one hop late — no max_tokens declared"
         )
     if r["side_effects_fired"]:
-        lines.append(f" ⚠ side-effects fired: {', '.join(r['side_effects_fired'])}")
-    lines.append(rule)
+        # #87 blast radius: what already hit the world when it stopped — verify/compensate these.
+        lines.append(" ⚠ blast radius — these side-effects already fired, verify/compensate:")
+        lines += [f"     ☐ {node}" for node in r["side_effects_fired"]]
+    audit = f" run {r['run_id'][:8]}"
+    if r.get("started_at"):
+        audit += f" · {r['started_at']}"
+    lines += [audit, rule]
     return "\n".join(lines)
 
 

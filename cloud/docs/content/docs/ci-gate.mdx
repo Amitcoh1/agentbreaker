@@ -119,6 +119,20 @@ breakerbox build agent.spec.json --no-policy   # bypass
 
 `build` auto-detects `breakerbox.yaml` in the working directory; point elsewhere with `--policy`.
 
+### Runtime templates
+
+The same posture at runtime, as named `guard()` presets — supply `budget_usd`, the template fills the
+enforcement knobs:
+
+```python
+from breakerbox import guard, policy
+
+app = guard(my_app, budget_usd=5.00, **policy.template("locked"))
+```
+
+`permissive` (just the budget), `standard` (loop detection + alerts), `locked` (kill on trip, loop +
+depth caps, no top-up, unknown models fail). One source of truth with the compile-time rules above.
+
 ## Egress certificate (airgap)
 
 A proxy *is* the egress — it can't attest to code it doesn't see. A static scan of the spec can

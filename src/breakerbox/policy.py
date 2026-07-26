@@ -80,3 +80,30 @@ def check_policy(spec: dict, policy: dict) -> list[Violation]:
             add("allow_destructive", f"destructive tool(s) not allowed: {', '.join(d)}")
 
     return out
+
+
+# Runtime policy templates (#74): named guard() presets for a safety posture. Supply budget_usd
+# yourself; the template fills the enforcement knobs. One source of truth with the compile-time
+# breakerbox.yaml rules above — "locked" mirrors a strict yaml (kill, loop+depth caps, no top-up).
+_TEMPLATES: dict[str, dict] = {
+    "permissive": {"on_trip": "pause"},
+    "standard": {"on_trip": "pause", "detect_loops": True, "alerts": True},
+    "locked": {
+        "on_trip": "kill",
+        "detect_loops": True,
+        "alerts": True,
+        "max_depth": 4,
+        "topup_policy": "deny",
+        "unknown_model": "fail",
+    },
+}
+
+
+def template(name: str) -> dict:
+    """guard() kwargs for a named safety posture: permissive | standard | locked (#74).
+
+    Usage: guard(app, budget_usd=5.00, **breakerbox.policy.template("locked"))
+    """
+    if name not in _TEMPLATES:
+        raise ValueError(f"unknown policy template {name!r}; choose from {sorted(_TEMPLATES)}")
+    return dict(_TEMPLATES[name])

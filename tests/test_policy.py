@@ -89,3 +89,30 @@ def test_cli_policy_check_and_build_refusal(tmp_path):
     assert main(["policy", str(spec_p), "-p", str(pol_p)]) == 1
     assert main(["build", str(spec_p), "-p", str(pol_p)]) == 1  # refuses to emit
     assert main(["build", str(spec_p), "-p", str(pol_p), "--no-policy"]) == 0  # bypass
+
+
+def test_runtime_policy_templates():
+    # #74: named guard() presets for a safety posture.
+    assert policy.template("permissive") == {"on_trip": "pause"}
+    locked = policy.template("locked")
+    assert locked["on_trip"] == "kill" and locked["detect_loops"] and locked["max_depth"] == 4
+    assert policy.template("standard")["detect_loops"] is True
+
+
+def test_template_returns_fresh_dict_and_rejects_unknown():
+    import pytest
+
+    policy.template("locked")["on_trip"] = "pause"  # mutate the copy
+    assert policy.template("locked")["on_trip"] == "kill"  # original unaffected
+    with pytest.raises(ValueError):
+        policy.template("bogus")
+
+
+def test_template_keys_are_valid_guard_kwargs():
+    import inspect
+
+    from breakerbox import guard
+
+    valid = set(inspect.signature(guard).parameters)
+    for name in ("permissive", "standard", "locked"):
+        assert set(policy.template(name)) <= valid  # every preset key is a real guard() param

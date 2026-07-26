@@ -44,6 +44,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     ceil.add_argument("--json", action="store_true", help="machine-readable output")
 
+    dow = sub.add_parser("dow", help="assess denial-of-wallet exposure (unbounded spend) of a spec")
+    dow.add_argument("spec", nargs="+", help="path(s) to graph spec.json file(s)")
+    dow.add_argument("--strict", action="store_true", help="exit 1 if any spec has a DoW finding")
+    dow.add_argument("--json", action="store_true", help="machine-readable output")
+
     lck = sub.add_parser(
         "lock", help="pin the price table + ceiling to breakerbox.lock; --check for CI drift"
     )
@@ -134,6 +139,27 @@ def main(argv: list[str] | None = None) -> int:
             if not args.json and multi and idx < len(args.spec) - 1:
                 print()
         return 1 if failed else 0
+    if args.command == "dow":
+        import json as _json
+
+        from breakerbox import dow as _dow
+        from breakerbox import graphspec
+
+        multi = len(args.spec) > 1
+        found = False
+        for idx, spec_path in enumerate(args.spec):
+            f = _dow.assess_dow(graphspec.load_spec(spec_path))
+            if f.severity != "none":
+                found = True
+            if args.json:
+                print(_json.dumps({"spec": spec_path, **f.as_dict()}))
+            else:
+                if multi:
+                    print(f"# {spec_path}")
+                print(_dow.format_dow(f))
+                if multi and idx < len(args.spec) - 1:
+                    print()
+        return 1 if (args.strict and found) else 0
     if args.command == "lock":
         import json as _json
         from pathlib import Path

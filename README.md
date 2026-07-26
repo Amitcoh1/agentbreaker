@@ -5,9 +5,9 @@
   </picture>
 </p>
 
-<p align="center"><strong>The visual agent builder that can't be hacked into — because there's nothing to hack.</strong></p>
+<p align="center"><strong>A hard dollar budget for your LangGraph agent — in one line of code.</strong></p>
 
-<p align="center">No server execution&nbsp;·&nbsp;No stored keys&nbsp;·&nbsp;Codegen only</p>
+<p align="center">A runaway retry loop that burns <code>$12.63</code> unguarded stops at <code>$0.82</code>.<br>In-process — no proxy, no gateway, no stored keys.</p>
 
 <p align="center"><code>pip install breakerbox</code></p>
 
@@ -26,20 +26,20 @@
   <img src="docs/brand/shots/demo.gif" alt="A guarded LangGraph run tripping at $0.82 of a $0.90 budget — next hop blocked, 0 side effects fired" width="820">
 </p>
 
-Prototype anywhere; ship with **Breakerbox**. You draw a workflow on a canvas, and it generates
-plain, editable LangGraph **Python** you download and run yourself — wrapped in `guard()`, a
-hierarchical dollar budget that stops runaway loops at a hop boundary and writes a receipt of
-exactly where the money went. In the [bundled demo](#the-demo), a runaway retry loop that burns
-**$12.63** unguarded stops at **$0.82** under `guard()`. Three things make it different:
+Wrap the compiled LangGraph app you already have in `guard()` — a hierarchical dollar budget
+that stops a runaway loop at a hop boundary (never mid-call) and writes a receipt of exactly
+where the money went. In the [bundled demo](#the-demo), a retry loop that burns **$12.63**
+unguarded stops at **$0.82**. Enforcement lives *inside* your process — no proxy, no gateway,
+no server of ours ever sees your keys or your data. Three things make it different:
 
-1. **Zero attack surface — codegen only.** No endpoint ever executes your flows; no provider
-   key is ever stored or transmitted. There's nothing on our side to compromise. (See
-   [Why no Run button?](#why-no-run-button))
-2. **Provable, not just observed.** The only tool that proves your agent's *maximum* cost
-   before it runs. Budget escrow, a static cost ceiling, runaway guards, and policy-as-code are
-   part of the artifact — not a dashboard you read after the money's gone.
+1. **Provable, not just observed.** It proves your agent's *maximum* cost *before* it runs.
+   Budget escrow, a static cost ceiling, runaway guards, and policy-as-code are part of the
+   artifact — not a dashboard you read after the money's gone.
+2. **In-process — nothing to compromise.** No proxy or gateway executes your flows; no provider
+   key is ever stored or transmitted. (See [Why no Run button?](#why-no-run-button))
 3. **Code you own.** The output is readable, hand-editable Python — scaffolding, not a walled
-   garden.
+   garden. Prefer to start visually? A [drag-and-drop builder](#build-it-visually) writes this
+   guarded Python for you.
 
 > **Breakerbox** is the product; the Python package is **`breakerbox`** (`pip install
 > breakerbox`). The import, CLI, and API names are unchanged.

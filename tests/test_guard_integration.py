@@ -198,3 +198,24 @@ def test_loops_run_to_completion_when_detection_off(tmp_path):
     guarded = guard(build(5), budget_usd=100.0, max_hops=100, on_trip="kill", report_dir=tmp_path)
     out = guarded.invoke({"count": 0}, {"recursion_limit": 100})
     assert out["count"] == 5
+
+
+# --- #83 real-time spend counter --------------------------------------------
+def test_live_callback_fires_per_hop_with_rising_spend(tmp_path):
+    updates = []
+    guarded = guard(
+        build(3), budget_usd=100.0, max_hops=100, on_trip="kill",
+        live=updates.append, report_dir=tmp_path,
+    )
+    guarded.invoke({"count": 0}, {"recursion_limit": 100})
+    assert [u["hops"] for u in updates] == [1, 2, 3]  # one update per model hop
+    assert all(u["budget_usd"] == 100.0 for u in updates)
+    spents = [u["spent_usd"] for u in updates]
+    assert spents == sorted(spents) and spents[0] > 0  # monotonically rising, real cost
+
+
+def test_live_true_prints_spend_line_to_stderr(tmp_path, capsys):
+    guarded = guard(build(2), budget_usd=5.0, on_trip="kill", live=True, report_dir=tmp_path)
+    guarded.invoke({"count": 0}, {"recursion_limit": 100})
+    err = capsys.readouterr().err
+    assert "[breakerbox]" in err and "/ $5.00" in err

@@ -17,12 +17,18 @@ _STOP = object()  # sentinel: worker drains, posts the final summary, exits
 
 class HttpEventSink:
     def __init__(
-        self, url: str, key: str | None = None, run_id: str | None = None, timeout: float = 5.0
+        self,
+        url: str,
+        key: str | None = None,
+        run_id: str | None = None,
+        timeout: float = 5.0,
+        control_key: str | None = None,
     ) -> None:
         self.url = url
         self.key = key
         self.run_id = run_id
         self.timeout = timeout
+        self.control_key = control_key  # #45: registered (hashed) at ingest for per-run CLI control
         self._q: queue.Queue = queue.Queue()
         self._done = threading.Event()
         self._worker = threading.Thread(target=self._run, daemon=True)
@@ -60,6 +66,8 @@ class HttpEventSink:
         headers = {"Content-Type": "application/json"}
         if self.key:
             headers["x-ingest-key"] = self.key
+        if self.control_key:
+            headers["x-control-key"] = self.control_key
         req = urllib.request.Request(
             self.url, data=json.dumps(body).encode(), method="POST", headers=headers
         )

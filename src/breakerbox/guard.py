@@ -418,6 +418,7 @@ class GuardedApp:
         live: bool | Callable,
         max_depth: int | None,
         alerts: bool | dict | Callable,
+        tags: dict | None,
     ) -> None:
         if on_trip not in ("pause", "kill"):
             raise ValueError(f"on_trip must be pause|kill, got {on_trip!r}")
@@ -440,6 +441,7 @@ class GuardedApp:
         self.max_depth = max_depth
         self.alerts = alerts
         self._alert_thresholds, self._alert_fn = _parse_alerts(alerts)
+        self.tags = {str(k): str(v) for k, v in (tags or {}).items()}  # #85 attribution tags
         # fail fast on a bad loop config at guard()-time, not mid-run
         make_detector(detect_loops)
         self.sub_budgets = sub_budgets or {}
@@ -559,6 +561,7 @@ class GuardedApp:
                 "velocity_micro_per_min": self.velocity_micro_per_min,
                 "on_trip": self.on_trip,
                 "sub_budgets": {k: _to_micro(v) for k, v in self.sub_budgets.items()},
+                "tags": self.tags,
             },
         )
         control = None
@@ -628,9 +631,10 @@ def guard(
     live: bool | Callable = False,
     max_depth: int | None = None,
     alerts: bool | dict | Callable = False,
+    tags: dict | None = None,
 ) -> GuardedApp:
     return GuardedApp(
         app, budget_usd, max_hops, ttl_seconds, velocity_usd_per_min, on_trip,
         sub_budgets, topup_policy, unknown_model, report_dir, report_to, otel,
-        detect_loops, live, max_depth, alerts,
+        detect_loops, live, max_depth, alerts, tags,
     )

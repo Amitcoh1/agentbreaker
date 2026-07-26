@@ -31,6 +31,7 @@
  .tool{color:var(--muted)}
  .se{color:var(--brass);font-weight:600}
  .warn{color:var(--muted);font-size:12px;font-style:italic}
+ .tag{display:inline-block;font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 8px;margin-right:4px}
  .foot{color:var(--muted);font-size:12px;margin-top:24px}
 </style></head>
 <body><div class="wrap">
@@ -43,6 +44,7 @@
    <div class="big">stopped at <span class="stop">{{ r.spent_disp }}</span></div>
    <div class="sub">budget {{ r.budget_disp }} · {{ r.hops }} hops · {{ r.status }}{% if r.trip_reason %} ({{ r.trip_reason }}){% endif %}</div>
    <div class="sub" style="margin-top:6px;opacity:.75">projected (naive linear extrapolation, likely an underestimate for accumulating-context loops): {{ r.projected_disp }}</div>
+   {% if r.tags %}<div class="sub" style="margin-top:6px">{% for k, v in r.tags.items() %}<span class="tag">{{ k }}={{ v }}</span> {% endfor %}</div>{% endif %}
  </div>
 
  <div class="grid">

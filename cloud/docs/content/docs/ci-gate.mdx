@@ -37,6 +37,7 @@ written to the job's step summary. That's it — no execution, no provider key, 
 | `max` | ✅ | — | Max allowed worst-case USD **per spec**. Over this, or unbounded, fails the run. |
 | `python-version` | — | `3.12` | Python used to run breakerbox. |
 | `breakerbox-version` | — | `>=0.6.0` | pip version specifier. `breakerbox ceiling` requires **≥ 0.6.0**. |
+| `comment` | — | `false` | Post the ceiling proof as a sticky PR comment (edits its previous one). Needs `permissions: pull-requests: write` on the job. |
 
 ## The CLI it wraps
 

@@ -54,6 +54,11 @@ def main(argv: list[str] | None = None) -> int:
     mcp.add_argument("--strict", action="store_true", help="exit 1 if any posture finding")
     mcp.add_argument("--json", action="store_true", help="machine-readable output")
 
+    flw = sub.add_parser("flow", help="scan an exported agent flow (Langflow) for findings")
+    flw.add_argument("flow", nargs="+", help="path(s) to an exported flow.json")
+    flw.add_argument("--strict", action="store_true", help="exit 1 if any finding")
+    flw.add_argument("--json", action="store_true", help="machine-readable output")
+
     lck = sub.add_parser(
         "lock", help="pin the price table + ceiling to breakerbox.lock; --check for CI drift"
     )
@@ -184,6 +189,27 @@ def main(argv: list[str] | None = None) -> int:
                     print(f"# {cfg_path}")
                 print(mcpscan.format_findings(findings))
                 if multi and idx < len(args.config) - 1:
+                    print()
+        return 1 if (args.strict and found) else 0
+    if args.command == "flow":
+        import json as _json
+
+        from breakerbox import flowscan
+
+        multi = len(args.flow) > 1
+        found = False
+        for idx, flow_path in enumerate(args.flow):
+            findings = flowscan.scan_flow(flowscan.load_flow(flow_path))
+            if findings:
+                found = True
+            if args.json:
+                for fi in findings:
+                    print(_json.dumps({"flow": flow_path, **fi.as_dict()}))
+            else:
+                if multi:
+                    print(f"# {flow_path}")
+                print(flowscan.format_findings(findings))
+                if multi and idx < len(args.flow) - 1:
                     print()
         return 1 if (args.strict and found) else 0
     if args.command == "lock":

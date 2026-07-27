@@ -13,6 +13,7 @@ import Nav from "@/components/Nav";
 import Pillars from "@/components/Pillars";
 import ProductWindow from "@/components/ProductWindow";
 import Quote from "@/components/Quote";
+import ReceiptPoster from "@/components/ReceiptPoster";
 import ScrollProgress from "@/components/ScrollProgress";
 import Stats from "@/components/Stats";
 
@@ -48,6 +49,7 @@ export default function MarketingPage() {
       <Manifesto />
       <Stats />
       <Quote />
+      <ReceiptPoster />
       <FinalCta />
       <Contact />
       <Footer />

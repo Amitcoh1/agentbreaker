@@ -6,7 +6,7 @@ const APP = process.env.NEXT_PUBLIC_APP_URL ?? "https://agentbreaker-cyan.vercel
 
 // The latest published version — drives the announcement bar. Bump on each release (matches the
 // pyproject version / the git tag). A new value re-shows the bar to everyone who dismissed the last.
-export const LATEST_VERSION = "0.5.0";
+export const LATEST_VERSION = "0.11.0";
 
 // Where to reach a human — usage help via GitHub, collaboration via email.
 export const EMAIL = "amit.cellebrite@gmail.com";

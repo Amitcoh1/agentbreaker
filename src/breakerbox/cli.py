@@ -59,6 +59,13 @@ def main(argv: list[str] | None = None) -> int:
     flw.add_argument("--strict", action="store_true", help="exit 1 if any finding")
     flw.add_argument("--json", action="store_true", help="machine-readable output")
 
+    bsl = sub.add_parser("baseline", help="fail CI on new findings vs an accepted baseline")
+    bsl.add_argument("findings", nargs="*",
+                     help="JSON/JSONL finding files from `dow|mcp|flow --json` (or - for stdin)")
+    bsl.add_argument("--update", action="store_true", help="accept current findings as baseline")
+    bsl.add_argument("-f", "--file", default=".breakerbox/findings-baseline.json",
+                     help="baseline path")
+
     lck = sub.add_parser(
         "lock", help="pin the price table + ceiling to breakerbox.lock; --check for CI drift"
     )
@@ -212,6 +219,43 @@ def main(argv: list[str] | None = None) -> int:
                 if multi and idx < len(args.flow) - 1:
                     print()
         return 1 if (args.strict and found) else 0
+    if args.command == "baseline":
+        import json as _json
+        import sys
+        from pathlib import Path
+
+        from breakerbox import findings as _f
+
+        texts = [sys.stdin.read() if p == "-" else Path(p).read_text() for p in args.findings]
+        if not args.findings:
+            texts.append(sys.stdin.read())  # default to stdin when no files given
+        found: list = []
+        for t in texts:
+            found.extend(_f.load_findings(t))
+        bpath = Path(args.file)
+        if args.update:
+            bpath.parent.mkdir(parents=True, exist_ok=True)
+            base = _f.build_baseline(found)
+            bpath.write_text(_json.dumps(base, indent=2) + "\n")
+            n = len(base["fingerprints"])
+            print(f"wrote {args.file} — accepted {n} finding(s) as baseline.")
+            return 0
+        if not bpath.exists():
+            print(f"no baseline at {args.file} — create it with "
+                  f"`breakerbox baseline --update <findings>`")
+            return 1
+        res = _f.check_baseline(found, _json.loads(bpath.read_text()))
+        for f in res.new:
+            print(f"NEW: {_f.summarize(f)}")
+        if res.fixed:
+            print(f"({len(res.fixed)} baselined finding(s) no longer present — "
+                  f"re-baseline with --update to prune)")
+        if res.new:
+            print(f"\n{len(res.new)} new finding(s) — fail. Accept with "
+                  f"`breakerbox baseline --update`.")
+            return 1
+        print(f"{args.file}: no new findings ({len(res.known)} known).")
+        return 0
     if args.command == "lock":
         import json as _json
         from pathlib import Path

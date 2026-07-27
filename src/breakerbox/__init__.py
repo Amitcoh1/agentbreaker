@@ -6,6 +6,7 @@ from breakerbox.guard import (
     GuardedApp,
     guard,
     mark_side_effecting,
+    mark_untrusted,
 )
 from breakerbox.ledger import InsufficientBudget, Ledger
 from breakerbox.pricing import PriceTable, UnknownModelError, cost_microusd
@@ -21,5 +22,6 @@ __all__ = [
     "cost_microusd",
     "guard",
     "mark_side_effecting",
+    "mark_untrusted",
 ]
 __version__ = "0.10.0"

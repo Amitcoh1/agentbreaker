@@ -30,3 +30,63 @@ don't exist in the product.
 The optional cloud dashboard uses a Breakerbox **ingest key** (not a provider key) to associate
 runs with your account. It is stored only as a hash; the plaintext is shown once when you create
 it. A provider (LLM) key is never involved.
+
+## Security scanning (0.11.0)
+
+Beyond protecting your own budget, Breakerbox ships four scanners that treat an agent — its flow,
+its config, its cost — as something to audit. All are **static and offline** (no run, no network,
+no payload generation) and emit the **same JSON finding shape**, so they compose into a CI gate.
+
+### `breakerbox dow` — denial-of-wallet
+
+Reframes the [provable cost ceiling](/docs/ci-gate) as a security finding: an input pattern that can
+burn spend without limit. A reachable loop with no `max_hops` is **critical** (no cap at all) or
+**high** (only the budget caps the per-invocation loss); it names the uncapped loop as the attack
+surface.
+
+```bash
+breakerbox dow pipeline.spec.json --strict   # exit 1 if a denial-of-wallet finding exists
+```
+
+### `breakerbox flow` — flow scanning
+
+Scans an exported **Langflow** flow as code and reports **embedded credentials** (a secret hardcoded
+in a node instead of a stored variable) and **unguarded actions** (a side-effecting node reachable
+from untrusted input — web / search / retrieval — with no approval step in between).
+
+```bash
+breakerbox flow exported-flow.json --json
+```
+
+### `breakerbox mcp` — MCP server posture
+
+Audits an agent's MCP configuration (`mcpServers`): secrets hardcoded in `env`/`args`, an unpinned
+supply chain (`npx`/`uvx` at `@latest`), non-TLS remotes, and static bearer tokens in headers.
+`${VAR}` references and pinned packages are correctly treated as safe.
+
+```bash
+breakerbox mcp .mcp.json --strict
+```
+
+### `breakerbox baseline` — regression gate
+
+Turns any of the above into a **recurring CI gate**: record an accepted set of findings, then fail
+the build only when a **new** one appears (a scan that was clean stays clean).
+
+```bash
+breakerbox flow app.json --json  > findings.jsonl
+breakerbox mcp  .mcp.json --json >> findings.jsonl
+breakerbox baseline findings.jsonl --update   # accept the current set once
+breakerbox baseline findings.jsonl            # in CI: exit 1 on anything new
+```
+
+The baseline (`.breakerbox/findings-baseline.json`) fingerprints each finding by source file, rule,
+and location — so a re-graded or re-worded finding keeps its identity and doesn't churn.
+
+## Runtime capability lock
+
+At **run time**, `guard(capability_lock=True)` enforces the same principle the flow scanner checks
+statically: once an agent consumes untrusted content, its capabilities **downgrade to read-only**.
+Tag an untrusted source with `mark_untrusted()`; if a side-effecting tool then fires, the run trips
+(`TripReason.CAPABILITY`) **before the tool executes** — so the write/send/spend never happens. See
+the [reference](/docs/reference) for the `guard()` parameters.

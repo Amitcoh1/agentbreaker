@@ -115,6 +115,8 @@ class _Run:
     alerted: set[float] = field(default_factory=set)  # #90 budget thresholds already warned
     calls: dict[str, _Call] = field(default_factory=dict)
     side_effect_fired: list[str] = field(default_factory=list)
+    tainted: bool = False  # #129 an untrusted-tagged tool has fired this run
+    taint_source: str | None = None  # #129 the tool that first introduced untrusted content
     otel_run_span: object | None = None  # parent run span, when otel=True
 
 
@@ -378,10 +380,30 @@ class _BudgetHandler(BaseCallbackHandler):
                       tags=None, metadata=None, **kwargs):
         self._gate()
         name = (serialized or {}).get("name") or "tool"
-        side = "side_effecting" in (tags or []) or bool((metadata or {}).get("side_effecting"))
+        tagset = tags or []
+        md = metadata or {}
+        side = "side_effecting" in tagset or bool(md.get("side_effecting"))
+        untrusted = "untrusted" in tagset or bool(md.get("untrusted"))
+        # #129 capability lock: once untrusted content has been consumed, a side-effecting call is
+        # a capability violation. Trip HERE, before note_hop and before the tool body runs — so the
+        # write/send/spend never happens (on_tool_start fires ahead of the tool itself).
+        if self._g.capability_lock and side and self._run.tainted:
+            self._run.eventlog.emit(
+                "capability_violation", node=name,
+                detail={"taint_source": self._run.taint_source},
+                cumulative_microusd=self._run.ledger.total_spent(),
+            )
+            self._run.tripwire.trip(TripReason.CAPABILITY)
+            self._trip(TripReason.CAPABILITY)
         self._run.tripwire.note_hop()
         if side:
             self._run.side_effect_fired.append(name)
+        if untrusted and not self._run.tainted:  # capabilities downgrade from here on
+            self._run.tainted = True
+            self._run.taint_source = name
+            self._run.eventlog.emit(
+                "taint", node=name, cumulative_microusd=self._run.ledger.total_spent()
+            )
         self._run.eventlog.emit(
             "tool_call", node=name, side_effecting=side,
             cumulative_microusd=self._run.ledger.total_spent(),
@@ -395,6 +417,17 @@ def mark_side_effecting(tool):
     tags = list(getattr(tool, "tags", None) or [])
     if "side_effecting" not in tags:
         tags.append("side_effecting")
+    tool.tags = tags
+    return tool
+
+
+def mark_untrusted(tool):
+    """Tag a LangChain tool whose output is untrusted input (a retrieval, web fetch, inbound
+    message). With capability_lock=True, once such a tool fires no side-effecting tool may run —
+    the agent's capabilities downgrade to read-only. Mirror of mark_side_effecting (#129)."""
+    tags = list(getattr(tool, "tags", None) or [])
+    if "untrusted" not in tags:
+        tags.append("untrusted")
     tool.tags = tags
     return tool
 
@@ -420,6 +453,7 @@ class GuardedApp:
         alerts: bool | dict | Callable,
         tags: dict | None,
         control_key: str | None,
+        capability_lock: bool,
     ) -> None:
         if on_trip not in ("pause", "kill"):
             raise ValueError(f"on_trip must be pause|kill, got {on_trip!r}")
@@ -441,6 +475,7 @@ class GuardedApp:
         self.live = live
         self.max_depth = max_depth
         self.alerts = alerts
+        self.capability_lock = capability_lock  # #129 downgrade to read-only after untrusted input
         self._alert_thresholds, self._alert_fn = _parse_alerts(alerts)
         self.tags = {str(k): str(v) for k, v in (tags or {}).items()}  # #85 attribution tags
         # #45 per-run control key: env fallback mirrors BREAKERBOX_INGEST_KEY.
@@ -637,9 +672,10 @@ def guard(
     alerts: bool | dict | Callable = False,
     tags: dict | None = None,
     control_key: str | None = None,
+    capability_lock: bool = False,
 ) -> GuardedApp:
     return GuardedApp(
         app, budget_usd, max_hops, ttl_seconds, velocity_usd_per_min, on_trip,
         sub_budgets, topup_policy, unknown_model, report_dir, report_to, otel,
-        detect_loops, live, max_depth, alerts, tags, control_key,
+        detect_loops, live, max_depth, alerts, tags, control_key, capability_lock,
     )

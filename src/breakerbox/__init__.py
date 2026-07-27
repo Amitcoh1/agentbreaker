@@ -24,4 +24,4 @@ __all__ = [
     "mark_side_effecting",
     "mark_untrusted",
 ]
-__version__ = "0.10.0"
+__version__ = "0.11.0"

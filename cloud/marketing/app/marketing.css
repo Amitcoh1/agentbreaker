@@ -794,3 +794,58 @@ body:has(.mkt) { background: #0f1114; }
   .mkt h1 .cut::after { width: 104%; animation: none; }
   html { scroll-behavior: auto; }
 }
+
+/* ── Post-port addition: tripped-receipt poster (ReceiptPoster.tsx). Reuses the brand tokens;
+      a paper receipt on the dark section with a rotated red stamp. ───────────────────────── */
+.mkt .poster { text-align: center; }
+.mkt .poster .lede { margin-inline: auto; }
+.mkt .rpaper {
+  --paper: #f4f1e8;
+  --ink: #17140f;
+  --stamp: #cf4230;
+  position: relative;
+  width: min(430px, 92vw);
+  margin: 52px auto 0;
+  padding: 30px 32px 40px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  text-align: left;
+  border-radius: 4px;
+  transform: rotate(-1.4deg);
+  box-shadow: 0 30px 70px -24px rgba(0, 0, 0, 0.7), 0 2px 0 rgba(0, 0, 0, 0.2);
+}
+.mkt .phead { display: flex; justify-content: space-between; font-weight: 700; font-size: 14px; letter-spacing: 0.5px; }
+.mkt .psub { margin-top: 10px; font-size: 12px; color: #6b6459; line-height: 1.5; }
+.mkt .prule { border-top: 1.5px dashed #c9c1b2; margin: 14px 0; }
+.mkt .pline { display: flex; align-items: baseline; gap: 8px; font-size: 13px; padding: 4px 0; }
+.mkt .pline .nm { white-space: nowrap; }
+.mkt .pline .dots { flex: 1; border-bottom: 1.5px dotted #b7ae9d; transform: translateY(-3px); }
+.mkt .pline .amt { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mkt .ptotal { font-weight: 700; font-size: 15px; }
+.mkt .ptotal .amt { text-decoration: line-through; text-decoration-color: var(--stamp); text-decoration-thickness: 2px; }
+.mkt .pthanks { margin-top: 14px; font-size: 12px; color: #9a9184; }
+.mkt .pstamp {
+  position: absolute;
+  left: 50%;
+  bottom: 56px;
+  transform: translateX(-50%) rotate(-10deg);
+  padding: 7px 20px 9px;
+  border: 3px solid var(--stamp);
+  border-radius: 8px;
+  color: var(--stamp);
+  font-family: var(--disp);
+  font-weight: 700;
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1;
+  box-shadow: inset 0 0 0 2px rgba(207, 66, 48, 0.25);
+  opacity: 0.94;
+}
+.mkt .pstamp b { display: block; font-size: 27px; letter-spacing: 2px; }
+.mkt .pstamp span { font-size: 15px; letter-spacing: 1px; }
+.mkt .postercta { margin-top: 46px; font-size: 19px; color: var(--tx2); }
+.mkt .postercta b { color: var(--tx); font-weight: 600; }
+@media (prefers-reduced-motion: reduce) {
+  .mkt .rpaper { transform: none; }
+}

@@ -14,8 +14,8 @@ export default function Hero() {
         </span>
       </h1>
       <p className="sub">
-        A hard dollar budget on the workflow itself — hierarchical across sub-agents, enforced
-        between steps, never a mid-flight 429. When a loop runs away, Breakerbox trips. Safely.
+        A hard dollar cap on the whole workflow, enforced between every step. When an agent loops,
+        it trips — before the bill does.
       </p>
       <div className="ctas">
         <a className="btn1" href={LINKS.dashboard}>

@@ -324,7 +324,7 @@ body:has(.mkt) { background: #0f1114; }
   .mkt .navdrop-caret { transition: none; }
 }
 
-.mkt .hero { text-align: center; padding: 84px 0 30px; position: relative; }
+.mkt .hero { text-align: center; padding: 120px 0 40px; position: relative; }
 .mkt .eyebrow {
   font-family: var(--mono);
   font-size: 12.5px;
@@ -335,10 +335,10 @@ body:has(.mkt) { background: #0f1114; }
 .mkt h1 {
   font-family: var(--disp);
   font-weight: 700;
-  font-size: clamp(42px, 6.4vw, 74px);
-  line-height: 1.02;
-  letter-spacing: -2.5px;
-  margin-top: 18px;
+  font-size: clamp(54px, 8.6vw, 108px);
+  line-height: 0.98;
+  letter-spacing: -3px;
+  margin-top: 22px;
 }
 .mkt .hl { display: inline-block; opacity: 0; transform: translateY(14px); animation: up 0.6s forwards; }
 .mkt .hl:nth-child(2) { animation-delay: 0.12s; }
@@ -590,7 +590,7 @@ body:has(.mkt) { background: #0f1114; }
 .mkt .mtrack .sep { color: var(--line2); }
 @keyframes mq { to { transform: translateX(-50%); } }
 
-.mkt section { padding: 104px 0; }
+.mkt section { padding: 148px 0; }
 .mkt h2 {
   font-family: var(--disp);
   font-weight: 600;
@@ -772,7 +772,7 @@ body:has(.mkt) { background: #0f1114; }
 
 @media (max-width: 920px) {
   /* fix #2: the design's h1 (clamp min 42px) had no mobile size and overflowed ≤~390px */
-  .mkt h1 { font-size: clamp(30px, 8.2vw, 44px); letter-spacing: -1.5px; }
+  .mkt h1 { font-size: clamp(38px, 10.5vw, 62px); letter-spacing: -2px; }
   .mkt .stagebody { grid-template-columns: 1fr; }
   .mkt .side { border-left: none; border-top: 1px solid var(--line); }
   .mkt .pillars, .mkt .split, .mkt .never, .mkt .flow3 { grid-template-columns: 1fr; }
@@ -782,7 +782,7 @@ body:has(.mkt) { background: #0f1114; }
   .mkt .stat:nth-child(2) { border-right: none; }
   .mkt .mani { padding: 36px 26px; }
   .mkt .navlinks > a:not(.ghpill) { display: none; }
-  .mkt section { padding: 72px 0; }
+  .mkt section { padding: 96px 0; }
   .mkt .cmpr { grid-template-columns: 1.2fr 1fr 1fr; font-size: 12.5px; }
   .mkt .cmpr > div:nth-child(3) { display: none; }
   .mkt .fgrid { grid-template-columns: 1fr 1fr; }

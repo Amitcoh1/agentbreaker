@@ -49,6 +49,11 @@ def main(argv: list[str] | None = None) -> int:
     dow.add_argument("--strict", action="store_true", help="exit 1 if any spec has a DoW finding")
     dow.add_argument("--json", action="store_true", help="machine-readable output")
 
+    mcp = sub.add_parser("mcp", help="audit an agent's MCP server config for posture issues")
+    mcp.add_argument("config", nargs="+", help="path(s) to an MCP config (mcpServers JSON)")
+    mcp.add_argument("--strict", action="store_true", help="exit 1 if any posture finding")
+    mcp.add_argument("--json", action="store_true", help="machine-readable output")
+
     lck = sub.add_parser(
         "lock", help="pin the price table + ceiling to breakerbox.lock; --check for CI drift"
     )
@@ -158,6 +163,27 @@ def main(argv: list[str] | None = None) -> int:
                     print(f"# {spec_path}")
                 print(_dow.format_dow(f))
                 if multi and idx < len(args.spec) - 1:
+                    print()
+        return 1 if (args.strict and found) else 0
+    if args.command == "mcp":
+        import json as _json
+
+        from breakerbox import mcpscan
+
+        multi = len(args.config) > 1
+        found = False
+        for idx, cfg_path in enumerate(args.config):
+            findings = mcpscan.scan_config(mcpscan.load_mcp_config(cfg_path))
+            if findings:
+                found = True
+            if args.json:
+                for fi in findings:
+                    print(_json.dumps({"config": cfg_path, **fi.as_dict()}))
+            else:
+                if multi:
+                    print(f"# {cfg_path}")
+                print(mcpscan.format_findings(findings))
+                if multi and idx < len(args.config) - 1:
                     print()
         return 1 if (args.strict and found) else 0
     if args.command == "lock":

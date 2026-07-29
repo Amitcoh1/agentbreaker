@@ -26,6 +26,9 @@ dependencies = [
 
 [project.optional-dependencies]
 otel = ["opentelemetry-api>=1.20"]
+# The LangChain 1.x agent-middleware front-end (breakerbox.middleware, #146). Opt-in: the core
+# library + guard() run on langchain-core 0.3; this extra enables BreakerboxMiddleware on 1.x agents.
+langchain1 = ["langchain>=1", "langgraph>=1"]
 dev = ["pytest>=8", "ruff>=0.6", "hypothesis>=6", "opentelemetry-sdk>=1.20"]
 
 [project.scripts]

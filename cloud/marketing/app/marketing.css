@@ -849,3 +849,121 @@ body:has(.mkt) { background: #0f1114; }
 @media (prefers-reduced-motion: reduce) {
   .mkt .rpaper { transform: none; }
 }
+
+/* ══ v2 sharp reshape (post-port, 2026-07): split hero + bento capabilities + quickstart ══
+   New sections only reuse the brand tokens; nothing above this line was modified. */
+
+/* rhythm: more air between sections, slightly larger section headings */
+.mkt section { padding: 136px 0; }
+.mkt h2 { font-size: clamp(32px, 4.4vw, 50px); }
+
+/* hero2 — statement left, live tripped-run card right */
+.mkt .hero2 {
+  display: grid;
+  grid-template-columns: 1.08fr 0.92fr;
+  gap: 60px;
+  align-items: center;
+  padding: 104px 0 96px;
+  position: relative;
+  text-align: left;
+}
+.mkt .hero2 h1 {
+  font-family: var(--disp);
+  font-weight: 700;
+  font-size: clamp(46px, 5.8vw, 86px);
+  line-height: 0.97;
+  letter-spacing: -2.8px;
+  margin-top: 18px;
+}
+.mkt .sub2 {
+  margin-top: 22px;
+  font-size: 19px;
+  color: var(--tx2);
+  max-width: 46ch;
+  line-height: 1.6;
+  opacity: 0;
+  animation: up 0.6s 0.3s forwards;
+}
+.mkt .ctas2 {
+  margin-top: 32px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  opacity: 0;
+  animation: up 0.6s 0.45s forwards;
+}
+.mkt .trust2 { margin-top: 26px; color: var(--tx3); font-size: 13.5px; }
+.mkt .trust2 b { color: var(--tx2); font-weight: 600; }
+.mkt .hcard {
+  background: linear-gradient(180deg, var(--bg2), var(--panel));
+  border: 1px solid var(--line2);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 40px 90px -40px rgba(0, 0, 0, 0.85);
+  opacity: 0;
+  animation: up 0.7s 0.35s forwards;
+}
+.mkt .hcard .hbar { display: flex; align-items: center; gap: 7px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.mkt .hcard .hbar i { width: 11px; height: 11px; border-radius: 50%; background: var(--line2); }
+.mkt .hcard .hbar .t { margin-left: 8px; font-family: var(--mono); font-size: 12px; color: var(--tx3); }
+.mkt .hcard .hbar .tripped { margin-left: auto; font-family: var(--mono); font-size: 11.5px; color: var(--brass); animation: pulse-b 2.2s ease-in-out infinite; }
+@keyframes pulse-b { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+.mkt .hcard .hbody { padding: 16px 18px 18px; font-family: var(--mono); font-size: 12.5px; }
+.mkt .hrow { display: grid; grid-template-columns: 74px 1fr 62px; gap: 10px; align-items: center; padding: 6.5px 0; color: var(--tx2); border-bottom: 1px solid var(--line); }
+.mkt .hrow .m { height: 7px; border-radius: 4px; background: var(--line2); overflow: hidden; }
+.mkt .hrow .m i { display: block; height: 100%; border-radius: 4px; background: var(--tx3); }
+.mkt .hrow.hot { color: var(--tx); }
+.mkt .hrow.hot .m i { background: var(--brass); }
+.mkt .hrow .amt { text-align: right; font-variant-numeric: tabular-nums; }
+.mkt .hrow.stop { border-bottom: none; color: var(--brass); padding-top: 11px; font-weight: 500; }
+.mkt .hmeter { height: 8px; border-radius: 99px; background: var(--line); margin-top: 14px; overflow: hidden; }
+.mkt .hmeter i { display: block; height: 100%; width: 91%; background: linear-gradient(90deg, var(--brass), #e5533c); }
+.mkt .hmlab { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11.5px; color: var(--tx3); margin-top: 7px; }
+
+/* capabilities bento */
+.mkt .bento { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 56px; }
+.mkt .bcard {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--bg2);
+  padding: 26px 24px 24px;
+  transition: border-color 0.25s, transform 0.25s;
+}
+.mkt .bcard:hover { border-color: var(--brass); transform: translateY(-2px); }
+.mkt .bcard .bk { display: inline-block; font-family: var(--mono); font-size: 12px; color: var(--brass); background: var(--brass-dim); border-radius: 6px; padding: 3px 9px; }
+.mkt .bcard h3 { font-family: var(--disp); font-size: 18.5px; font-weight: 600; letter-spacing: -0.3px; margin: 14px 0 8px; }
+.mkt .bcard p { margin: 0; color: var(--tx2); font-size: 14.5px; line-height: 1.65; }
+.mkt .ledek { font-family: var(--mono); font-size: 0.88em; color: var(--brass); background: var(--brass-dim); border-radius: 6px; padding: 1px 6px; }
+
+/* quickstart terminal */
+.mkt .qsec { text-align: center; }
+.mkt .qwrap { max-width: 760px; margin: 52px auto 0; }
+.mkt .qterm {
+  text-align: left;
+  background: #0b0d10;
+  border: 1px solid var(--line2);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 30px 70px -30px rgba(0, 0, 0, 0.85);
+}
+.mkt .qbar { display: flex; align-items: center; gap: 7px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.mkt .qbar i { width: 11px; height: 11px; border-radius: 50%; background: var(--line2); }
+.mkt .qbar .t { margin-left: 8px; font-family: var(--mono); font-size: 12px; color: var(--tx3); }
+.mkt .qterm pre { margin: 0; padding: 20px 22px; font-family: var(--mono); font-size: 13.5px; line-height: 1.8; overflow: auto; color: var(--tx); }
+.mkt .qterm .pr { color: #3fd08e; }
+.mkt .qterm .cm { color: var(--tx3); }
+.mkt .qterm .kw { color: #c792ea; }
+.mkt .qterm .st { color: #c3e88d; }
+.mkt .qterm .br { color: var(--brass); font-weight: 600; }
+
+@media (max-width: 920px) {
+  .mkt section { padding: 92px 0; }
+  .mkt .hero2 { grid-template-columns: 1fr; gap: 40px; padding: 72px 0 64px; }
+  .mkt .hero2 h1 { font-size: clamp(38px, 10vw, 56px); letter-spacing: -2px; }
+  .mkt .bento { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mkt .sub2, .mkt .ctas2, .mkt .hcard { opacity: 1; animation: none; }
+  .mkt .hcard .hbar .tripped { animation: none; }
+}

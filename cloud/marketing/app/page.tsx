@@ -1,25 +1,18 @@
+import Capabilities from "@/components/Capabilities";
 import Compare from "@/components/Compare";
 import Contact from "@/components/Contact";
-import CostForecast from "@/components/CostForecast";
 import FinalCta from "@/components/FinalCta";
 import Footer from "@/components/Footer";
-import Governance from "@/components/Governance";
 import Hero from "@/components/Hero";
 import HowItWorks from "@/components/HowItWorks";
-import Integration from "@/components/Integration";
-import Manifesto from "@/components/Manifesto";
-import Marquee from "@/components/Marquee";
 import Nav from "@/components/Nav";
-import Pillars from "@/components/Pillars";
-import ProductWindow from "@/components/ProductWindow";
-import Quote from "@/components/Quote";
+import Quickstart from "@/components/Quickstart";
 import ReceiptPoster from "@/components/ReceiptPoster";
 import ScrollProgress from "@/components/ScrollProgress";
-import Stats from "@/components/Stats";
 
 const title = "Breakerbox — your agents can't outspend you";
 const description =
-  "A hard dollar budget on the workflow itself — hierarchical across sub-agents, enforced between steps, never a mid-flight 429. The open-source circuit breaker for AI agents. No server execution, no stored keys.";
+  "A hard dollar cap on the whole agent workflow, enforced between every step. The open-source circuit breaker for LangGraph agents — provable cost ceiling, runaway detection, no server, no stored keys.";
 
 export const metadata = {
   title,
@@ -28,6 +21,12 @@ export const metadata = {
   twitter: { card: "summary_large_image", title, description, images: ["/og-image.png"] },
 };
 
+// v2 sharp cut — nine beats, one argument:
+//   hook + proof (Hero w/ tripped-run card) → mechanism (Reserve/Execute/Reconcile) → the pain
+//   ($385 receipt) → what you get (Capabilities bento) → do it now (Quickstart terminal) → why us
+//   (Compare) → CTA → Contact → Footer.
+// Cut from v1 (components remain on disk, restore = one import): ProductWindow, Marquee,
+// Pillars + Governance (folded into Capabilities), CostForecast, Integration, Manifesto, Stats, Quote.
 export default function MarketingPage() {
   return (
     <>
@@ -36,20 +35,13 @@ export default function MarketingPage() {
       <main className="gridbg">
         <div className="wrap">
           <Hero />
-          <ProductWindow />
         </div>
-        <Marquee />
       </main>
       <HowItWorks />
-      <Pillars />
-      <Governance />
-      <CostForecast />
-      <Integration />
-      <Compare />
-      <Manifesto />
-      <Stats />
-      <Quote />
       <ReceiptPoster />
+      <Capabilities />
+      <Quickstart />
+      <Compare />
       <FinalCta />
       <Contact />
       <Footer />

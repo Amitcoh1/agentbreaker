@@ -31,7 +31,9 @@ _NODE_FIELDS: dict[str, set[str]] = {
 # A tool's blast radius, coarsest-first. `destructive` is the one codegen acts on: it wires a
 # human-approval gate (interrupt_before) into the compiled graph. `read` means no side effect.
 _SIDE_EFFECT_CLASSES = {"read", "network", "write", "destructive"}
-_CONFIG_FIELDS = {"budget_usd", "max_hops", "ttl_seconds", "velocity_usd_per_min", "on_trip"}
+_CONFIG_FIELDS = {
+    "budget_usd", "max_hops", "ttl_seconds", "velocity_usd_per_min", "on_trip", "shadow", "ladder",
+}
 _EDGE_FIELDS = {"source", "target", "condition"}
 _TOP_FIELDS = {"version", "config", "nodes", "edges"}
 _ON_TRIP = {"pause", "kill"}
@@ -128,6 +130,15 @@ def _validate_config(config, r: ValidationResult) -> None:
         v = config.get(k)
         if v is not None and (not _num(v) or v < 0):
             r.errors.append(f"config.{k} must be a number ≥ 0.")
+    shadow = config.get("shadow")
+    if shadow is not None and not isinstance(shadow, bool):
+        r.errors.append("config.shadow must be true or false.")
+    ladder = config.get("ladder")
+    if ladder is not None:
+        if not isinstance(ladder, dict):
+            r.errors.append('config.ladder must be an object (e.g. {} or {"swap_model": "..."}).')
+        elif ladder.get("swap_model") is not None and not isinstance(ladder.get("swap_model"), str):
+            r.errors.append("config.ladder.swap_model must be a string.")
 
 
 def _validate_nodes(nodes, r: ValidationResult) -> set[str]:

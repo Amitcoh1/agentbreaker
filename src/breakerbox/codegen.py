@@ -77,7 +77,7 @@ def generate(spec: dict) -> str:
         "from langgraph.graph import END, START, StateGraph",
         "from langgraph.checkpoint.memory import MemorySaver",
         "",
-        "from breakerbox import guard",
+        f"from breakerbox import {'Ladder, guard' if 'ladder' in config else 'guard'}",
         "",
     ]
 
@@ -177,6 +177,12 @@ def generate(spec: dict) -> str:
     if sub:
         items = ", ".join(f'"{k}": {_money(v)}' for k, v in sub.items())
         kw.append(f"    sub_budgets={{{items}}},")
+    if "ladder" in config:
+        sm = (config["ladder"] or {}).get("swap_model")
+        arg = f'swap_model="{sm}"' if sm else ""
+        kw.append(f"    ladder=Ladder.default({arg}),")
+    if config.get("shadow"):
+        kw.append("    shadow=True,")
 
     # Destructive tools get a human-approval gate baked into the compiled graph: LangGraph pauses
     # before those nodes so a person must resume. Safety made static — visible in the code you own.

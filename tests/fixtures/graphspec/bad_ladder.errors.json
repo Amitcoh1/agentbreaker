@@ -1,0 +1,3 @@
+[
+  "config.ladder must be an object (e.g. {} or {\"swap_model\": \"...\"})."
+]

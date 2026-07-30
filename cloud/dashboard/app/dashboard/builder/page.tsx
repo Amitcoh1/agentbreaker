@@ -541,6 +541,40 @@ function GuardConfig({
           <option value="kill">kill</option>
         </select>
       </label>
+      <label className="flex items-start gap-2 pt-1">
+        <input
+          type="checkbox"
+          className="mt-0.5"
+          checked={config.shadow === true}
+          onChange={(e) => onChange({ shadow: e.target.checked ? true : undefined })}
+        />
+        <span className="text-xs text-muted">
+          <span className="text-fg">shadow</span> — observe-only: log what would trip, enforce nothing
+        </span>
+      </label>
+      <label className="flex items-start gap-2">
+        <input
+          type="checkbox"
+          className="mt-0.5"
+          checked={config.ladder !== undefined}
+          onChange={(e) => onChange({ ladder: e.target.checked ? {} : undefined })}
+        />
+        <span className="text-xs text-muted">
+          <span className="text-fg">ladder</span> — degrade before you die: cheaper model at 80%,
+          graceful stop at 100%
+        </span>
+      </label>
+      {config.ladder !== undefined && (
+        <label className="block pl-6">
+          <span className="text-xs text-muted">ladder.swap_model (optional cheaper model)</span>
+          <input
+            className={inp}
+            placeholder="openai/gpt-4o-mini"
+            value={config.ladder?.swap_model ?? ""}
+            onChange={(e) => onChange({ ladder: { swap_model: e.target.value || undefined } })}
+          />
+        </label>
+      )}
     </div>
   );
 }

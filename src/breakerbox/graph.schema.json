@@ -17,7 +17,13 @@
         "max_hops": {"type": "integer", "minimum": 1},
         "ttl_seconds": {"type": "number", "minimum": 0},
         "velocity_usd_per_min": {"type": "number", "minimum": 0},
-        "on_trip": {"enum": ["pause", "kill"]}
+        "on_trip": {"enum": ["pause", "kill"]},
+        "shadow": {"type": "boolean"},
+        "ladder": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {"swap_model": {"type": "string"}}
+        }
       }
     },
     "nodes": {

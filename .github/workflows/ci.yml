@@ -19,6 +19,22 @@ jobs:
       - run: ruff check .
       - run: pytest -q
 
+  test-langchain1:
+    # #146: verify guard() + BreakerboxMiddleware on the modern stack (langchain / langgraph 1.x).
+    # The `test` job above pins langchain-core 0.3; this leg installs the `langchain1` extra, which
+    # upgrades to 1.x, so the importorskip-gated middleware tests activate and the callback path is
+    # exercised on the runtime 2026 agents actually ship.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev,otel,langchain1]"
+      # guard against the extra silently resolving to 0.3 — this leg is meaningless on old langchain.
+      - run: python -c "import langchain_core as c; assert c.__version__[0] == '1', c.__version__"
+      - run: pytest -q
+
   dashboard:
     runs-on: ubuntu-latest
     defaults:

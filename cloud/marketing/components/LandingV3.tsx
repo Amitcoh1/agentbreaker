@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import BrandMark from "./BrandMark";
+import WatchReel from "./WatchReel";
+import { LINKS } from "./links";
 
 // v3 landing — "the trip is the hero". Faithful port of the design handoff (Breakerbox Landing v3).
 // Styles live in app/v3.css (scoped under .v3); the hero live-run logic is the DCLogic class ported
-// to hooks. Values, copy, and hop data are the intended production spec.
+// to hooks. Values, copy, and hop data are the intended production spec. Logo (BrandMark), the reel,
+// and every destination (LINKS) are the real site's — same sources as the previous deployment.
 
-const GH = "https://github.com/Amitcoh1/agentbreaker";
 const HOPS = [
   { hop: "hop 3", note: "model call", amt: "$0.09", v: 0.09, loop: false },
   { hop: "hop 7", note: "tool call → search", amt: "$0.16", v: 0.16, loop: false },
@@ -17,13 +20,36 @@ const HOPS = [
 const CAP = 0.9;
 const dim = (a: number) => `rgba(242,240,233,${a})`;
 
-const LOGO = (
-  <svg width="13" height="16" viewBox="0 0 18 22" fill="none" aria-hidden="true">
-    <rect x="1" y="1" width="16" height="20" rx="3" stroke="#0b0d10" strokeWidth="2" />
-    <rect x="6" y="4.5" width="6" height="7" rx="1.5" fill="#0b0d10" />
-    <path d="M4.5 16.5h9" stroke="#0b0d10" strokeWidth="2" strokeLinecap="round" />
-  </svg>
-);
+// Every destination the previous deployment exposed, from the shared LINKS source of truth.
+const FOOTER_COLS: { title: string; links: { label: string; href: string }[] }[] = [
+  {
+    title: "PROJECT",
+    links: [
+      { label: "GitHub", href: LINKS.github },
+      { label: "PyPI", href: LINKS.pypi },
+      { label: "Roadmap", href: LINKS.roadmap },
+      { label: "Changelog", href: LINKS.changelog },
+    ],
+  },
+  {
+    title: "PRODUCT",
+    links: [
+      { label: "Docs", href: LINKS.docs },
+      { label: "Builder", href: LINKS.builder },
+      { label: "Dashboard", href: LINKS.dashboard },
+    ],
+  },
+  {
+    title: "COMMUNITY",
+    links: [
+      { label: "Discussions", href: LINKS.discussions },
+      { label: "Issues", href: LINKS.issues },
+      { label: "Contact", href: LINKS.email },
+      { label: "X / Twitter", href: LINKS.twitter },
+      { label: "LinkedIn", href: LINKS.linkedin },
+    ],
+  },
+];
 
 function Eyebrow({ n, children }: { n: string; children: React.ReactNode }) {
   return (
@@ -223,8 +249,8 @@ export default function LandingV3() {
       {/* ---- header ---- */}
       <header className="v3-header">
         <div className="v3-wrap v3-header-in">
-          <a href="#top" style={{ display: "flex", alignItems: "center", gap: 11 }}>
-            <span className="v3-logo">{LOGO}</span>
+          <a href={LINKS.home} aria-label="Breakerbox home" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <BrandMark width={20} height={29} />
             <span style={{ font: "700 13.5px/1 var(--font-jbmono)", letterSpacing: "0.16em" }}>
               BREAKERBOX
             </span>
@@ -233,7 +259,9 @@ export default function LandingV3() {
             <a href="#mechanism">Mechanism</a>
             <a href="#ceiling">Ceiling</a>
             <a href="#security">Security</a>
-            <a href={GH} target="_blank" rel="noopener noreferrer">
+            <a href={LINKS.docs}>Docs</a>
+            <a href={LINKS.dashboard}>Dashboard</a>
+            <a href={LINKS.github} target="_blank" rel="noopener noreferrer">
               GitHub
             </a>
             <button type="button" className="v3-install" onClick={copyInstall}>
@@ -297,13 +325,16 @@ export default function LandingV3() {
               is enforced <em style={{ color: "#f2f0e9", fontStyle: "normal" }}>inside your process</em>,
               between every hop — not observed on a dashboard after the invoice lands.
             </p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginBottom: 34 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginBottom: 18 }}>
               <button type="button" className="v3-cta" onClick={copyInstall}>
                 {copyLabel}
               </button>
-              <a className="v3-ghost" href={GH} target="_blank" rel="noopener noreferrer">
+              <a className="v3-ghost" href={LINKS.github} target="_blank" rel="noopener noreferrer">
                 Read the source →
               </a>
+            </div>
+            <div style={{ marginBottom: 34 }}>
+              <WatchReel />
             </div>
             <div style={{ font: "400 12px/1.9 var(--font-jbmono)", color: dim(0.42), letterSpacing: "0.03em" }}>
               MIT · Python 3.11+ · in-process · no server, no stored keys · 221 tests
@@ -776,12 +807,8 @@ export default function LandingV3() {
       {/* ---- closing ---- */}
       <section style={{ position: "relative", maxWidth: 1280, margin: "0 auto", padding: "clamp(90px,12vw,170px) clamp(20px,5vw,64px) clamp(60px,8vw,110px)", textAlign: "center" }}>
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 34 }}>
-          <span style={{ display: "grid", placeItems: "center", width: 58, height: 58, borderRadius: 17, background: "linear-gradient(160deg,#eec253,#b8880f)", boxShadow: "0 18px 44px -14px rgba(212,160,23,0.6),inset 0 1px 0 rgba(255,255,255,0.4)" }}>
-            <svg width="24" height="30" viewBox="0 0 18 22" fill="none" aria-hidden="true">
-              <rect x="1" y="1" width="16" height="20" rx="3" stroke="#0b0d10" strokeWidth="2" />
-              <rect x="6" y="4.5" width="6" height="7" rx="1.5" fill="#0b0d10" />
-              <path d="M4.5 16.5h9" stroke="#0b0d10" strokeWidth="2" strokeLinecap="round" />
-            </svg>
+          <span style={{ display: "grid", placeItems: "center", filter: "drop-shadow(0 14px 34px rgba(212,160,23,0.5))" }}>
+            <BrandMark width={46} height={68} />
           </span>
         </div>
         <h2 style={{ font: "700 clamp(44px,6.6vw,96px)/0.98 var(--font-display)", letterSpacing: "-0.045em", margin: "0 auto 26px", maxWidth: "14ch", textWrap: "balance" }}>
@@ -795,7 +822,7 @@ export default function LandingV3() {
           <button type="button" className="v3-cta" style={{ padding: "18px 30px", borderRadius: 15, fontSize: "15.5px" }} onClick={copyInstall}>
             {copyLabel}
           </button>
-          <a className="v3-ghost" href={GH} target="_blank" rel="noopener noreferrer" style={{ padding: "18px 30px", borderRadius: 15 }}>
+          <a className="v3-ghost" href={LINKS.github} target="_blank" rel="noopener noreferrer" style={{ padding: "18px 30px", borderRadius: 15 }}>
             Star on GitHub
           </a>
         </div>
@@ -815,14 +842,66 @@ export default function LandingV3() {
 
       {/* ---- footer ---- */}
       <footer style={{ borderTop: `1px solid ${dim(0.07)}`, overflow: "hidden" }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "38px clamp(20px,5vw,64px) 0", display: "flex", flexWrap: "wrap", gap: 20, alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ font: "400 12px/1.7 var(--font-jbmono)", color: dim(0.38) }}>
-            MIT · Python 3.11+ · in-process · no server, no stored keys · 221 tests
+        <div
+          style={{
+            maxWidth: 1280,
+            margin: "0 auto",
+            padding: "clamp(48px,6vw,76px) clamp(20px,5vw,64px) 0",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit,minmax(min(180px,100%),1fr))",
+            gap: "clamp(32px,4vw,56px)",
+          }}
+        >
+          <div style={{ minWidth: 200 }}>
+            <a href={LINKS.home} aria-label="Breakerbox home" style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+              <BrandMark width={20} height={29} />
+              <span style={{ font: "700 13.5px/1 var(--font-jbmono)", letterSpacing: "0.16em" }}>BREAKERBOX</span>
+            </a>
+            <p style={{ margin: 0, font: "400 14px/1.6 var(--font-sans)", color: dim(0.5), maxWidth: "30ch" }}>
+              The circuit breaker for AI agents. Built in the open.
+            </p>
+          </div>
+          {FOOTER_COLS.map((col) => (
+            <div key={col.title}>
+              <div style={{ font: "500 11px/1 var(--font-jbmono)", letterSpacing: "0.2em", color: dim(0.4), marginBottom: 16 }}>
+                {col.title}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+                {col.links.map((l) => {
+                  const ext = l.href.startsWith("http");
+                  return (
+                    <a
+                      key={l.label}
+                      className="v3-footlink"
+                      href={l.href}
+                      style={{ font: "500 13.5px/1 var(--font-sans)" }}
+                      {...(ext ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                    >
+                      {l.label}
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div
+          style={{
+            maxWidth: 1280,
+            margin: "0 auto",
+            padding: "clamp(32px,4vw,48px) clamp(20px,5vw,64px) 0",
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 16,
+            justifyContent: "space-between",
+            font: "400 12px/1.7 var(--font-jbmono)",
+            color: dim(0.38),
+          }}
+        >
+          <span>
+            © 2026 Breakerbox · MIT license · <a className="v3-footlink" href={LINKS.privacy}>Privacy</a>
           </span>
-          <span style={{ display: "flex", gap: 24, font: "500 12px/1 var(--font-jbmono)", letterSpacing: "0.08em" }}>
-            <a className="v3-footlink" href={GH} target="_blank" rel="noopener noreferrer">GITHUB</a>
-            <a className="v3-footlink" href="https://pypi.org/project/breakerbox/" target="_blank" rel="noopener noreferrer">PYPI</a>
-          </span>
+          <span>no server · no stored keys · no run button · 221 tests</span>
         </div>
         <div aria-hidden="true" style={{ maxWidth: 1280, margin: "0 auto", padding: "0 clamp(20px,5vw,64px)", font: "700 clamp(84px,15.5vw,236px)/0.78 var(--font-display)", letterSpacing: "-0.05em", color: dim(0.045), userSelect: "none", transform: "translateY(0.16em)", whiteSpace: "nowrap" }}>
           BREAKERBOX

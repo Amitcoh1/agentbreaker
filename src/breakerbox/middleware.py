@@ -110,6 +110,8 @@ class BreakerboxMiddleware(AgentMiddleware):
         exit_behavior: str = "end",
         ladder: Ladder | None = None,
         swap_model: Any = None,
+        shadow: bool = False,
+        on_would_trip: Any = None,
     ) -> None:
         super().__init__()
         if budget_usd <= 0:
@@ -125,6 +127,9 @@ class BreakerboxMiddleware(AgentMiddleware):
         # MODEL_SWAP rung (Breakerbox is codegen/no-vendor — it can't build one from a string).
         self.ladder = ladder
         self.swap_model = swap_model
+        # #151 shadow mode: observe-only — record via on_would_trip(dict), enforce nothing.
+        self.shadow = shadow
+        self.on_would_trip = on_would_trip
 
     # ---- gate: runs before each model call ----
     @hook_config(can_jump_to=["end"])
@@ -139,9 +144,15 @@ class BreakerboxMiddleware(AgentMiddleware):
         if reason is None:
             return None
         spent_usd = spent / MICRO_PER_USD
+        decision = self._decision(reason, spent)
+        if self.shadow:  # observe-only: record the would-trip, never block the run
+            if self.on_would_trip is not None:
+                d = decision.to_dict()
+                d["shadow"] = True
+                self.on_would_trip(d)
+            return None
         if self.exit_behavior == "error":
             raise BudgetTripped(reason.value, spent_usd)
-        decision = self._decision(reason, spent)
         cap = _usd(self.budget_micro / MICRO_PER_USD)
         verb = "graceful stop" if decision.action is LadderAction.GRACEFUL_STOP else "tripped"
         notice = (

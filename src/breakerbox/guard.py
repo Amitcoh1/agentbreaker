@@ -45,6 +45,9 @@ from breakerbox.sink import HttpEventSink
 from breakerbox.tripwire import TripReason, Tripwire
 
 _ROOT = "root"
+# #151 shadow mode: an effectively-unbounded ledger so the run never blocks — the configured
+# budget still drives would-trip detection via the tripwire.
+_SHADOW_LEDGER = 10**15
 
 
 def _to_micro(usd: float) -> int:
@@ -141,6 +144,7 @@ class _Run:
     loop: LoopDetector | None = None  # #82 semantic loop detector, when detect_loops is on
     alerted: set[float] = field(default_factory=set)  # #90 budget thresholds already warned
     ladder_crossed: set[int] = field(default_factory=set)  # #150 degrade rungs already recorded
+    would_tripped: set[TripReason] = field(default_factory=set)  # #151 shadow reasons recorded
     calls: dict[str, _Call] = field(default_factory=dict)
     side_effect_fired: list[str] = field(default_factory=list)
     tainted: bool = False  # #129 an untrusted-tagged tool has fired this run
@@ -244,12 +248,28 @@ class _BudgetHandler(BaseCallbackHandler):
             self._trip(reason)
 
     def _trip(self, reason: TripReason) -> None:
+        if self._g.shadow:
+            self._record_would_trip(reason)
+            return
         self._run.eventlog.emit(
             "trip",
             cumulative_microusd=self._run.ledger.total_spent(),
             detail={"reason": reason.value, "on_trip": self._g.on_trip},
         )
         raise _Trip(reason)
+
+    def _record_would_trip(self, reason: TripReason) -> None:
+        """#151 shadow mode: record what WOULD have tripped (once per reason), then continue."""
+        if reason in self._run.would_tripped:
+            return
+        self._run.would_tripped.add(reason)
+        spent = self._run.ledger.total_spent()
+        decision = budget_decision(
+            reason, spent, self._g.budget_micro, self._g.ladder, override_url=self._g._control_url
+        )
+        detail = decision.to_dict()
+        detail["shadow"] = True
+        self._run.eventlog.emit("would_trip", cumulative_microusd=spent, detail=detail)
 
     def _emit_live(self) -> None:
         """#83: a live $-spent / budget line (or callback) after each hop reconciles. No server."""
@@ -359,7 +379,7 @@ class _BudgetHandler(BaseCallbackHandler):
         max_out = inv.get("max_tokens") or DEFAULT_MAX_OUTPUT_TOKENS
         # cost_microusd may raise UnknownModelError here — i.e. before dispatch, never $0
         estimate = self._g.prices.cost_microusd(model, tokens_in, max_out)
-        account = node if node in self._g.sub_budgets else _ROOT
+        account = node if (node in self._g.sub_budgets and not self._g.shadow) else _ROOT
         res = self._reserve_or_trip(account, estimate)
         self._run.tripwire.note_hop()
         call = _Call(res, account, node, model, tokens_in, estimate,
@@ -428,6 +448,8 @@ class _BudgetHandler(BaseCallbackHandler):
         reason = tw.check(led.total_spent())
         if reason:
             tw.trip(reason)
+            if self._g.shadow:  # record now — this may be the last hop, so no next gate fires
+                self._record_would_trip(reason)
 
     def on_llm_error(self, error, *, run_id, **kwargs):
         call = self._run.calls.pop(str(run_id), None)
@@ -516,10 +538,11 @@ class GuardedApp:
         control_key: str | None,
         capability_lock: bool,
         ladder: Ladder | None,
+        shadow: bool,
     ) -> None:
         if on_trip not in ("pause", "kill"):
             raise ValueError(f"on_trip must be pause|kill, got {on_trip!r}")
-        if on_trip == "pause" and getattr(app, "checkpointer", None) is None:
+        if on_trip == "pause" and not shadow and getattr(app, "checkpointer", None) is None:
             raise ValueError(
                 "on_trip='pause' needs the app compiled with a checkpointer "
                 "(e.g. compile(checkpointer=MemorySaver()))"
@@ -539,6 +562,7 @@ class GuardedApp:
         self.alerts = alerts
         self.capability_lock = capability_lock  # #129 downgrade to read-only after untrusted input
         self.ladder = ladder  # #150 degradation ladder (None => binary pause/kill, unchanged)
+        self.shadow = shadow  # #151 observe-only: record would-trips, enforce nothing
         self._alert_thresholds, self._alert_fn = _parse_alerts(alerts)
         self.tags = {str(k): str(v) for k, v in (tags or {}).items()}  # #85 attribution tags
         # #45 per-run control key: env fallback mirrors BREAKERBOX_INGEST_KEY.
@@ -637,9 +661,11 @@ class GuardedApp:
     def _start_run(self) -> _Run:
         run_id = uuid.uuid4().hex
         ledger = Ledger()
-        ledger.open_account(_ROOT, None, self.budget_micro)
-        for name, usd in self.sub_budgets.items():
-            ledger.open_account(name, _ROOT, _to_micro(usd))
+        # shadow: an unbounded root so nothing blocks; sub-budgets are skipped (all spend -> root).
+        ledger.open_account(_ROOT, None, _SHADOW_LEDGER if self.shadow else self.budget_micro)
+        if not self.shadow:
+            for name, usd in self.sub_budgets.items():
+                ledger.open_account(name, _ROOT, _to_micro(usd))
         tripwire = Tripwire(
             self.budget_micro, self.max_hops, self.ttl_seconds, self.velocity_micro_per_min
         )
@@ -774,9 +800,11 @@ def guard(
     control_key: str | None = None,
     capability_lock: bool = False,
     ladder: Ladder | None = None,
+    shadow: bool = False,
 ) -> GuardedApp:
     return GuardedApp(
         app, budget_usd, max_hops, ttl_seconds, velocity_usd_per_min, on_trip,
         sub_budgets, topup_policy, unknown_model, report_dir, report_to, otel,
         detect_loops, live, max_depth, alerts, tags, control_key, capability_lock, ladder,
+        shadow,
     )

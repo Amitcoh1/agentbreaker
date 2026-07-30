@@ -1,0 +1,14 @@
+{
+  "version": "1",
+  "config": {
+    "budget_usd": 5.0,
+    "ladder": "yes"
+  },
+  "nodes": [
+    {"id": "start", "type": "start"},
+    {"id": "end", "type": "end"}
+  ],
+  "edges": [
+    {"source": "start", "target": "end"}
+  ]
+}

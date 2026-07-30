@@ -32,6 +32,8 @@ export interface SpecConfig {
   ttl_seconds?: number;
   velocity_usd_per_min?: number;
   on_trip?: string;
+  shadow?: boolean;
+  ladder?: { swap_model?: string };
   [k: string]: unknown;
 }
 export interface GraphSpec {
@@ -60,7 +62,15 @@ const NODE_FIELDS: Record<string, string[]> = {
 // A tool's blast radius, coarsest-first. `destructive` is the one codegen acts on: it wires a
 // human-approval gate (interrupt_before) into the compiled graph. `read` means no side effect.
 const SIDE_EFFECT_CLASSES = ["read", "network", "write", "destructive"];
-const CONFIG_FIELDS = ["budget_usd", "max_hops", "ttl_seconds", "velocity_usd_per_min", "on_trip"];
+const CONFIG_FIELDS = [
+  "budget_usd",
+  "max_hops",
+  "ttl_seconds",
+  "velocity_usd_per_min",
+  "on_trip",
+  "shadow",
+  "ladder",
+];
 const EDGE_FIELDS = ["source", "target", "condition"];
 const TOP_FIELDS = ["version", "config", "nodes", "edges"];
 const ON_TRIP = ["pause", "kill"];
@@ -141,6 +151,19 @@ function validateConfig(config: unknown, errors: string[]): void {
     const v = c[k];
     if (v !== undefined && (!isNum(v) || (v as number) < 0)) {
       errors.push(`config.${k} must be a number ≥ 0.`);
+    }
+  }
+  if (c.shadow !== undefined && typeof c.shadow !== "boolean") {
+    errors.push("config.shadow must be true or false.");
+  }
+  if (c.ladder !== undefined) {
+    if (typeof c.ladder !== "object" || c.ladder === null || Array.isArray(c.ladder)) {
+      errors.push('config.ladder must be an object (e.g. {} or {"swap_model": "..."}).');
+    } else {
+      const sm = (c.ladder as { swap_model?: unknown }).swap_model;
+      if (sm !== undefined && typeof sm !== "string") {
+        errors.push("config.ladder.swap_model must be a string.");
+      }
     }
   }
 }
@@ -373,7 +396,9 @@ export function generate(spec: GraphSpec): string {
     "from langgraph.graph import END, START, StateGraph",
     "from langgraph.checkpoint.memory import MemorySaver",
     "",
-    "from breakerbox import guard",
+    config.ladder !== undefined
+      ? "from breakerbox import Ladder, guard"
+      : "from breakerbox import guard",
     "",
   ];
 
@@ -456,6 +481,11 @@ export function generate(spec: GraphSpec): string {
     const items = sub.map((n) => `"${n.id}": ${money(n.sub_budget_usd as number)}`).join(", ");
     kw.push(`    sub_budgets={${items}},`);
   }
+  if (config.ladder !== undefined) {
+    const sm = (config.ladder as { swap_model?: string }).swap_model;
+    kw.push(`    ladder=Ladder.default(${sm ? `swap_model="${sm}"` : ""}),`);
+  }
+  if (config.shadow) kw.push("    shadow=True,");
 
   // Destructive tools get a human-approval gate baked into the compiled graph: LangGraph pauses
   // before those nodes so a person must resume. Safety made static — visible in the code you own.

@@ -1,14 +1,5 @@
-import Capabilities from "@/components/Capabilities";
-import Compare from "@/components/Compare";
-import Contact from "@/components/Contact";
-import FinalCta from "@/components/FinalCta";
-import Footer from "@/components/Footer";
-import Hero from "@/components/Hero";
-import HowItWorks from "@/components/HowItWorks";
-import Nav from "@/components/Nav";
-import Quickstart from "@/components/Quickstart";
-import ReceiptPoster from "@/components/ReceiptPoster";
-import ScrollProgress from "@/components/ScrollProgress";
+import "./v3.css";
+import LandingV3 from "@/components/LandingV3";
 
 const title = "Breakerbox — your agents can't outspend you";
 const description =
@@ -21,30 +12,9 @@ export const metadata = {
   twitter: { card: "summary_large_image", title, description, images: ["/og-image.png"] },
 };
 
-// v2 sharp cut — nine beats, one argument:
-//   hook + proof (Hero w/ tripped-run card) → mechanism (Reserve/Execute/Reconcile) → the pain
-//   ($385 receipt) → what you get (Capabilities bento) → do it now (Quickstart terminal) → why us
-//   (Compare) → CTA → Contact → Footer.
-// Cut from v1 (components remain on disk, restore = one import): ProductWindow, Marquee,
-// Pillars + Governance (folded into Capabilities), CostForecast, Integration, Manifesto, Stats, Quote.
+// v3 "the trip is the hero" — single-page landing. The v2 components (Nav/Hero/HowItWorks/…)
+// remain on disk; restore = revert this file. Design system + hero live-run logic live in
+// app/v3.css and components/LandingV3.tsx.
 export default function MarketingPage() {
-  return (
-    <>
-      <ScrollProgress />
-      <Nav />
-      <main className="gridbg">
-        <div className="wrap">
-          <Hero />
-        </div>
-      </main>
-      <HowItWorks />
-      <ReceiptPoster />
-      <Capabilities />
-      <Quickstart />
-      <Compare />
-      <FinalCta />
-      <Contact />
-      <Footer />
-    </>
-  );
+  return <LandingV3 />;
 }

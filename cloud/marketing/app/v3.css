@@ -176,3 +176,44 @@
 .v3-step-badge { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; background: rgba(212, 160, 23, 0.14); border: 1px solid rgba(212, 160, 23, 0.35); font: 700 12px/1 var(--mono); color: var(--brass-l); }
 .v3-footlink { color: rgba(242, 240, 233, 0.62); transition: color 0.15s ease; }
 .v3-footlink:hover { color: var(--brass-l); }
+
+/* ---- motion polish (progressive enhancement — JS adds .v3-anim on mount) ----
+   Reveals use the independent `translate` property so they compose with any element's
+   own `transform` (receipt rotate, card hover-lift) instead of fighting it. Elements
+   already in the viewport at load are marked settled synchronously → no flash of hidden
+   content. Under prefers-reduced-motion the JS never adds .v3-anim, so nothing hides. */
+.v3-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 60;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, #c08f14, #eec253, #f6d67c);
+  box-shadow: 0 0 12px rgba(212, 160, 23, 0.55);
+}
+.v3-anim .v3-reveal {
+  opacity: 0;
+  translate: 0 26px;
+  transition:
+    opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1),
+    translate 0.7s cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.v3-anim .v3-reveal.in { opacity: 1; translate: 0 0; }
+
+/* CTA shine sweep — on-demand (hover only), never a constant loop */
+.v3-cta { position: relative; overflow: hidden; }
+.v3-cta::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(120deg, transparent 32%, rgba(255, 255, 255, 0.45) 50%, transparent 68%);
+  transform: translateX(-130%);
+  transition: transform 0.6s ease;
+}
+.v3-cta:hover::after { transform: translateX(130%); }

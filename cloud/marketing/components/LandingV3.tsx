@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // v3 landing — "the trip is the hero". Faithful port of the design handoff (Breakerbox Landing v3).
 // Styles live in app/v3.css (scoped under .v3); the hero live-run logic is the DCLogic class ported
@@ -35,7 +35,68 @@ function Eyebrow({ n, children }: { n: string; children: React.ReactNode }) {
   );
 }
 
+// Number that ramps from 0 → `to` once scrolled into view (eased, ~1.5s). Jumps straight
+// to the final value under prefers-reduced-motion. Browser rAF/perf.now — client only.
+function CountUp({
+  to,
+  prefix = "",
+  suffix = "",
+  decimals = 0,
+  className,
+  style,
+}: {
+  to: number;
+  prefix?: string;
+  suffix?: string;
+  decimals?: number;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  const [val, setVal] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      setVal(to);
+      return;
+    }
+    let raf = 0;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        io.disconnect();
+        let start: number | undefined;
+        const tick = (t: number) => {
+          start ??= t;
+          const p = Math.min(1, (t - start) / 1500);
+          const eased = 1 - Math.pow(1 - p, 3);
+          setVal(p < 1 ? to * eased : to);
+          if (p < 1) raf = requestAnimationFrame(tick);
+        };
+        raf = requestAnimationFrame(tick);
+      },
+      { threshold: 0.5 },
+    );
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [to]);
+  const body = decimals > 0 ? val.toFixed(decimals) : Math.round(val).toLocaleString("en-US");
+  return (
+    <div ref={ref} className={className} style={style}>
+      {prefix}
+      {body}
+      {suffix}
+    </div>
+  );
+}
+
 export default function LandingV3() {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
   const [disp, setDisp] = useState(0);
   const [step, setStep] = useState(0);
   const [tab, setTab] = useState(0);
@@ -78,6 +139,69 @@ export default function LandingV3() {
     };
   }, [runKey]);
 
+  // Scroll-reveal (progressive enhancement). Reveals use the independent `translate`
+  // property (see v3.css) so they compose with each element's own transform. Blocks already
+  // in view at mount are settled synchronously → no flash. Skipped under reduced motion.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    root.classList.add("v3-anim");
+    const sel = ".v3-eyebrow, .v3-h2, .v3-lede, .v3-card, .v3-glass, .v3-receipt, blockquote";
+    const els = Array.from(root.querySelectorAll<HTMLElement>(sel)).filter(
+      (el) => !el.closest("#top"), // hero already enters via bbrise
+    );
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add("in");
+            io.unobserve(e.target);
+          }
+        });
+      },
+      { threshold: 0.14, rootMargin: "0px 0px -7% 0px" },
+    );
+    const vh = window.innerHeight;
+    els.forEach((el) => {
+      el.classList.add("v3-reveal");
+      if (el.classList.contains("v3-card") && el.parentElement) {
+        const sibs = Array.from(
+          el.parentElement.querySelectorAll<HTMLElement>(":scope > .v3-card"),
+        );
+        const i = sibs.indexOf(el);
+        if (i > 0) el.style.transitionDelay = `${i * 70}ms`; // staggered cascade
+      }
+      if (el.getBoundingClientRect().top < vh * 0.9) el.classList.add("in");
+      else io.observe(el);
+    });
+    return () => io.disconnect();
+  }, []);
+
+  // Thin brass scroll-progress rail at the very top.
+  useEffect(() => {
+    const bar = progressRef.current;
+    if (!bar) return;
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      const h = document.documentElement;
+      const max = h.scrollHeight - h.clientHeight;
+      bar.style.transform = `scaleX(${max > 0 ? h.scrollTop / max : 0})`;
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+
   const copyInstall = () => {
     try {
       navigator.clipboard?.writeText("pip install breakerbox");
@@ -94,7 +218,8 @@ export default function LandingV3() {
   const tabBorder = (i: number) => (tab === i ? "#d4a017" : "transparent");
 
   return (
-    <div className="v3">
+    <div className="v3" ref={rootRef}>
+      <div className="v3-progress" ref={progressRef} aria-hidden="true" />
       {/* ---- header ---- */}
       <header className="v3-header">
         <div className="v3-wrap v3-header-in">
@@ -303,15 +428,20 @@ export default function LandingV3() {
               </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "clamp(32px,4.6vw,64px)", paddingTop: 36, borderTop: `1px solid ${dim(0.1)}` }}>
                 {[
-                  ["$47,000", "IN 11 DAYS"],
-                  ["1.67B", "TOKENS IN 5 HOURS"],
-                ].map(([big, label]) => (
-                  <div key={label}>
-                    <div className="v3-gt-stat" style={{ font: "700 clamp(44px,5.4vw,76px)/1 var(--font-display)", letterSpacing: "-0.04em" }}>
-                      {big}
-                    </div>
+                  { to: 47000, prefix: "$", decimals: 0, label: "IN 11 DAYS" },
+                  { to: 1.67, suffix: "B", decimals: 2, label: "TOKENS IN 5 HOURS" },
+                ].map((s) => (
+                  <div key={s.label}>
+                    <CountUp
+                      to={s.to}
+                      prefix={s.prefix}
+                      suffix={s.suffix}
+                      decimals={s.decimals}
+                      className="v3-gt-stat"
+                      style={{ font: "700 clamp(44px,5.4vw,76px)/1 var(--font-display)", letterSpacing: "-0.04em" }}
+                    />
                     <div style={{ font: "400 12px/1.5 var(--font-jbmono)", letterSpacing: "0.08em", color: dim(0.45), marginTop: 12 }}>
-                      {label}
+                      {s.label}
                     </div>
                   </div>
                 ))}

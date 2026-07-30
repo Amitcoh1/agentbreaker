@@ -63,6 +63,10 @@ export default function RunDetail({
     () => hops.map((h, i) => ({ name: i + 1, spent: microToUsd(h.cumulative_microusd) })),
     [hops],
   );
+  // #174 the explainable trip decision (#150/#151): carried on graceful_stop / would_trip
+  // (shadow) / pause events. Shown as its own card, not a bare boolean.
+  const decisionInfo = useMemo(() => findDecision(events), [events]);
+  const shadowCount = useMemo(() => events.filter((e) => e.type === "would_trip").length, [events]);
 
   const status = displayStatus(run);
   const tripped = status === "killed" || status === "paused";
@@ -89,6 +93,11 @@ export default function RunDetail({
       <header className="flex flex-wrap items-center gap-3">
         <h1 className="num text-lg font-semibold">run {shortId(run.run_id)}</h1>
         <StatusBadge status={status} reason={run.trip_reason} />
+        {shadowCount > 0 && (
+          <span className="chip bg-ink/[0.06] text-muted" title="observe-only: nothing was enforced">
+            👁 shadow · {shadowCount} would-trip{shadowCount > 1 ? "s" : ""}
+          </span>
+        )}
         {!readOnly && run.public && <CopyLink runId={run.run_id} />}
       </header>
 
@@ -109,6 +118,8 @@ export default function RunDetail({
           </div>
         )}
       </div>
+
+      {decisionInfo && <DecisionCard decision={decisionInfo.decision} shadow={decisionInfo.shadow} />}
 
       <div className="flex gap-1 border-b border-border">
         {TABS.filter((t) => !(readOnly && t === "Controls")).map((t) => (
@@ -236,7 +247,7 @@ function LogsTab({ events }: { events: RunEvent[] }) {
 
 function LogLine({ e }: { e: RunEvent }) {
   const time = e.ts ? new Date(e.ts).toLocaleTimeString(undefined, { hour12: false }) : "";
-  const alert = e.type === "trip" || e.type === "pause";
+  const alert = e.type === "trip" || e.type === "pause" || e.type === "graceful_stop";
   const tokens =
     e.tokens_in != null || e.tokens_out != null ? `${e.tokens_in ?? 0}→${e.tokens_out ?? 0}` : null;
   const cost = e.actual_microusd != null ? usd(microToUsd(e.actual_microusd)) : null;
@@ -248,6 +259,16 @@ function LogLine({ e }: { e: RunEvent }) {
   if (e.type === "pause") notes.push(`reason: ${String(d.reason ?? "?")}`);
   if (e.type === "resume") notes.push(`+${usd(Number(d.extra_usd ?? 0))} budget`);
   if (e.type === "control") notes.push(`command: ${String(d.command ?? "?")}`);
+  // #174 the ladder / shadow / graceful-stop events (#150/#151)
+  if (e.type === "ladder")
+    notes.push(
+      `rung ${String(d.rung)} @ ${pct(d.threshold)} · ${(Array.isArray(d.actions) ? d.actions : []).join("+")}` +
+        (d.swap_model ? ` → ${String(d.swap_model)}` : ""),
+    );
+  if (e.type === "would_trip")
+    notes.push(`shadow · would trip: ${String(d.reason ?? "?")}${d.policy ? ` (${String(d.policy)})` : ""}`);
+  if (e.type === "graceful_stop")
+    notes.push(`graceful stop: ${String(d.reason ?? "?")} · returned partial results`);
   if (d.overshoot) notes.push("cap enforced one hop late — no max_tokens declared");
   if (d.discrepancy) notes.push(`meter Δ vs provider: ${JSON.stringify(d.discrepancy)}`);
 
@@ -271,6 +292,69 @@ function LogLine({ e }: { e: RunEvent }) {
           ↳ {notes.join(" · ")}
         </div>
       )}
+    </div>
+  );
+}
+
+function pct(v: unknown): string {
+  const n = Number(v);
+  return Number.isFinite(n) ? `${Math.round(n * 100)}%` : "—";
+}
+
+// The explainable TripDecision rides on graceful_stop / would_trip (shadow) / pause events.
+function findDecision(
+  events: RunEvent[],
+): { decision: Record<string, unknown>; shadow: boolean } | null {
+  for (const e of events) {
+    const d = (e.detail ?? {}) as Record<string, unknown>;
+    if (e.type === "graceful_stop") return { decision: d, shadow: false };
+    if (e.type === "would_trip") return { decision: d, shadow: true };
+    if (e.type === "pause" && d.decision) {
+      return { decision: d.decision as Record<string, unknown>, shadow: false };
+    }
+  }
+  return null;
+}
+
+function DecisionCard({ decision, shadow }: { decision: Record<string, unknown>; shadow: boolean }) {
+  const str = (k: string) => (decision[k] == null ? undefined : String(decision[k]));
+  const overrideUrl = str("override_url");
+  const rung = decision["ladder_rung"];
+  const action = str("action");
+  return (
+    <div className="card p-5">
+      <div className="flex items-center gap-2 text-sm font-semibold">
+        {shadow && <span className="chip bg-ink/[0.06] text-muted">👁 shadow</span>}
+        <span>Why it {shadow ? "would have stopped" : action ? `did: ${action}` : "tripped"}</span>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-3 text-xs sm:grid-cols-3">
+        <Field k="policy" v={str("policy")} />
+        <Field k="reason" v={str("reason")} />
+        <Field k="action" v={action} />
+        <Field k="threshold" v={pct(decision["threshold"])} />
+        <Field k="observed" v={pct(decision["counter_value"])} />
+        <Field k="confidence" v={pct(decision["confidence"])} />
+        {rung != null && <Field k="ladder rung" v={String(rung)} />}
+      </div>
+      {overrideUrl && (
+        <a
+          href={overrideUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-3 inline-block text-xs text-brass hover:underline"
+        >
+          override this trip →
+        </a>
+      )}
+    </div>
+  );
+}
+
+function Field({ k, v }: { k: string; v?: string }) {
+  return (
+    <div>
+      <div className="text-muted">{k}</div>
+      <div className="num mt-0.5 text-fg">{v ?? "—"}</div>
     </div>
   );
 }

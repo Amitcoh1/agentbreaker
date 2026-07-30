@@ -1,0 +1,62 @@
+---
+title: Agents can't predict their own spend
+description: Why agentic cost is structurally unpredictable — and why you can't forecast it, only bound it. The case for a spend breaker, in four findings.
+---
+
+You cannot forecast a stochastic process with a fat tail. You can only bound it. That, in one line, is
+why every production agent needs a spend breaker — the same way every production service needs a rate
+limiter.
+
+## The problem, in one incident
+
+A team ran a four-agent LangChain market-research pipeline. Two agents entered a request ping-pong loop
+in production. It ran for **11 days**. The bill was **$47,000**. Nobody noticed until it was over.
+
+Every company scaling agents has a smaller version of this story: runs that should cost $0.40 costing
+$12, multiplied across thousands of executions, invisible until the invoice.
+
+## Four findings
+
+Stanford's Digital Economy Lab studied agentic workloads. Four results should change how you budget:
+
+1. **Agentic tasks consume ~1000× the tokens of chat.** An agent that plans, calls tools, reflects, and
+   retries burns three orders of magnitude more than a single chat turn. Your chat-era cost intuition is
+   off by 1000×.
+2. **Identical tasks vary up to 30× in cost between runs.** Same prompt, same tools, same model — the
+   cost of one run tells you almost nothing about the next. **The variance is the bill.**
+3. **Accuracy saturates at intermediate spend.** Past a peak, more spend buys no more correctness — it's
+   pure waste. The expensive tail of runs is often the *least* useful.
+4. **Models systematically underestimate their own usage.** Ask an agent how much it will spend and it
+   low-balls. It cannot be trusted to self-govern.
+
+## Why you can't forecast it — only bound it
+
+Efficiency techniques — caching, routing, context pruning, better retrieval — lower the *average* cost.
+They do nothing about the **tail**, and with 30× variance the tail is where the money goes. Observability
+tools show you the fire after the house has burned down.
+
+The distribution has a fat tail. You can't predict where a given run lands on it. What you *can* do is
+put a hard wall at the edge: a budget the run cannot cross, a loop it cannot sustain, a ceiling you can
+prove **before** the run starts.
+
+## Measure everywhere. Enforce at the boundary.
+
+That's the thesis. Meter every model and tool call; enforce a spend policy at the hop boundary — **trip,
+degrade, and stop, not just alert.** Breakerbox does exactly this, in-process:
+
+```python
+from breakerbox import guard, Ladder
+
+app = guard(
+    my_langgraph_app,
+    budget_usd=5.00,          # a hard wall the run cannot cross
+    ladder=Ladder.default(),  # degrade before you die: cheaper model at 80%, graceful stop at 100%
+    detect_loops=True,        # catch the runaway the 11-day pipeline had
+)
+```
+
+Not sure you trust it in production yet? Turn it on in [shadow mode](/docs/reference) first — it logs
+what *would* have tripped this week and enforces nothing, so you see the wall before you build it.
+
+See [how it compares](/docs/landscape) for where this sits next to gateways, observability, and the
+other agent-budget tools.

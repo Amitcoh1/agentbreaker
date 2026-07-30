@@ -306,3 +306,38 @@ def test_alerts_default_logs_to_stderr(tmp_path, capsys):
     )
     guarded.invoke({"count": 0}, {"recursion_limit": 100})
     assert "% of budget spent" in capsys.readouterr().err
+
+
+# --- #150 degradation ladder + explainable trips ----------------------------
+def test_ladder_graceful_stop_returns_partial_results(tmp_path):
+    from breakerbox.guard import GracefulStop
+    from breakerbox.ladder import Ladder, LadderAction
+    from breakerbox.meter import DEFAULT_MAX_OUTPUT_TOKENS
+
+    est = cost_microusd(MODEL, 100, DEFAULT_MAX_OUTPUT_TOKENS)  # per-call reserve estimate
+    budget_usd = (est + COST_PER_CALL // 2) / 1_000_000  # one call fits; the second trips budget
+    guarded = guard(
+        build(5, MemorySaver()), budget_usd=budget_usd, report_dir=tmp_path,
+        ladder=Ladder.default(),
+    )
+    result = guarded.invoke({"count": 0}, {"recursion_limit": 100})
+    assert isinstance(result, GracefulStop)  # returned, not raised — degrade before you die
+    assert result.decision.action is LadderAction.GRACEFUL_STOP
+    assert result.decision.reason is TripReason.BUDGET
+    assert result.partial is not None and result.partial["count"] == 1  # partial progress kept
+    d = result.decision.to_dict()  # explainable object is stable + complete
+    assert d["policy"] == "ladder:graceful_stop@1.00" and d["reason"] == "budget"
+    run = _only_run(guarded)
+    assert any(e.type == "graceful_stop" for e in run.eventlog.events)
+
+
+def test_no_ladder_keeps_binary_kill_and_carries_decision(tmp_path):
+    # ladder defaults off → existing binary kill is unchanged (opt-in, non-breaking).
+    guarded = guard(build(50), budget_usd=0.0001, on_trip="kill", report_dir=tmp_path)
+    with pytest.raises(BudgetKilled) as exc:
+        guarded.invoke({"count": 0}, {"recursion_limit": 100})
+    assert exc.value.reason == "budget"
+    # the explainable object rides along even without a ladder; no ladder => no degrade action
+    assert exc.value.decision is not None
+    assert exc.value.decision.reason is TripReason.BUDGET
+    assert exc.value.decision.action is None

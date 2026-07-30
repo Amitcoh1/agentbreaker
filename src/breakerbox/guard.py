@@ -29,6 +29,7 @@ from langchain_core.callbacks import BaseCallbackHandler
 
 from breakerbox.control import ControlPoller
 from breakerbox.events import EventLog
+from breakerbox.ladder import Ladder, LadderAction, TripDecision, budget_decision
 from breakerbox.ledger import InsufficientBudget, Ledger, ReservationId
 from breakerbox.loopdetect import LoopDetector, make_detector
 from breakerbox.meter import (
@@ -52,12 +53,18 @@ def _to_micro(usd: float) -> int:
 
 class BudgetPaused(Exception):
     def __init__(
-        self, checkpoint_id: str, spent_usd: float, reason: str, report_path: Path
+        self,
+        checkpoint_id: str,
+        spent_usd: float,
+        reason: str,
+        report_path: Path,
+        decision: TripDecision | None = None,
     ) -> None:
         self.checkpoint_id = checkpoint_id
         self.spent_usd = spent_usd
         self.reason = reason
         self.report_path = report_path
+        self.decision = decision  # #150 the explainable trip object
         super().__init__(
             f"budget paused ({reason}): spent ${spent_usd:.4f}; "
             f"resume with checkpoint_id={checkpoint_id!r}"
@@ -66,16 +73,36 @@ class BudgetPaused(Exception):
 
 class BudgetKilled(Exception):
     def __init__(
-        self, spent_usd: float, reason: str, report_path: Path, side_effects_fired: list[str]
+        self,
+        spent_usd: float,
+        reason: str,
+        report_path: Path,
+        side_effects_fired: list[str],
+        decision: TripDecision | None = None,
     ) -> None:
         self.spent_usd = spent_usd
         self.reason = reason
         self.report_path = report_path
         self.side_effects_fired = side_effects_fired
+        self.decision = decision  # #150 the explainable trip object
         super().__init__(
             f"budget killed ({reason}): spent ${spent_usd:.4f}; "
             f"side-effecting tools fired: {side_effects_fired or 'none'}"
         )
+
+
+@dataclass
+class GracefulStop:
+    """#150: returned (not raised) when the ladder degrades to a graceful stop.
+
+    Degrade before you die — instead of killing, the run stops cleanly and hands back whatever
+    partial state was checkpointed, plus the explainable decision and the receipt path.
+    """
+
+    decision: TripDecision
+    partial: object | None  # last checkpointed state values, if the app has a checkpointer
+    spent_usd: float
+    report_path: Path
 
 
 class _Trip(Exception):
@@ -113,6 +140,7 @@ class _Run:
     remote_action: str | None = None  # "pause" | "kill" from the dashboard
     loop: LoopDetector | None = None  # #82 semantic loop detector, when detect_loops is on
     alerted: set[float] = field(default_factory=set)  # #90 budget thresholds already warned
+    ladder_crossed: set[int] = field(default_factory=set)  # #150 degrade rungs already recorded
     calls: dict[str, _Call] = field(default_factory=dict)
     side_effect_fired: list[str] = field(default_factory=list)
     tainted: bool = False  # #129 an untrusted-tagged tool has fired this run
@@ -268,6 +296,38 @@ class _BudgetHandler(BaseCallbackHandler):
                         file=sys.stderr, flush=True,
                     )
 
+    def _check_ladder(self) -> None:
+        """#150: record each degrade rung (model_swap / tool_narrow) as it's crossed — once each.
+
+        guard() is a callback: it can't rewrite the request, so these rungs are *advisory* here
+        (BreakerboxMiddleware enforces them via wrap_model_call). The graceful-stop / kill rung is
+        enforced at the trip, not in this observe-only pass.
+        """
+        ladder = self._g.ladder
+        budget = self._g.budget_micro
+        if ladder is None or budget <= 0:
+            return
+        frac = self._run.ledger.total_spent() / budget
+        rung = ladder.rung_for(frac)
+        if rung is None or rung.stops_run:
+            return
+        idx = ladder.index_of(rung)
+        if idx in self._run.ladder_crossed:
+            return
+        self._run.ladder_crossed.add(idx)
+        self._run.eventlog.emit(
+            "ladder",
+            cumulative_microusd=self._run.ledger.total_spent(),
+            detail={
+                "rung": idx,
+                "threshold": rung.threshold,
+                "actions": [a.value for a in rung.actions],
+                "swap_model": rung.swap_model,
+                "enforced": False,
+                "note": "advisory on the callback; BreakerboxMiddleware enforces model_swap",
+            },
+        )
+
     # ---- model calls ----
     def on_chat_model_start(self, serialized, messages, *, run_id, parent_run_id=None,
                             tags=None, metadata=None, **kwargs):
@@ -361,6 +421,7 @@ class _BudgetHandler(BaseCallbackHandler):
         )
         self._emit_live()
         self._check_alerts()
+        self._check_ladder()
         if call.span is not None:
             self._g._otel.end_hop(call.span, final_in, final_out, actual)
         # soft check: velocity/budget crossed -> mark tripped, enforced at NEXT gate
@@ -454,6 +515,7 @@ class GuardedApp:
         tags: dict | None,
         control_key: str | None,
         capability_lock: bool,
+        ladder: Ladder | None,
     ) -> None:
         if on_trip not in ("pause", "kill"):
             raise ValueError(f"on_trip must be pause|kill, got {on_trip!r}")
@@ -476,6 +538,7 @@ class GuardedApp:
         self.max_depth = max_depth
         self.alerts = alerts
         self.capability_lock = capability_lock  # #129 downgrade to read-only after untrusted input
+        self.ladder = ladder  # #150 degradation ladder (None => binary pause/kill, unchanged)
         self._alert_thresholds, self._alert_fn = _parse_alerts(alerts)
         self.tags = {str(k): str(v) for k, v in (tags or {}).items()}  # #85 attribution tags
         # #45 per-run control key: env fallback mirrors BREAKERBOX_INGEST_KEY.
@@ -631,22 +694,59 @@ class GuardedApp:
         return config, configurable["thread_id"]
 
     def _handle_trip(self, run: _Run, reason: TripReason):
-        spent_usd = run.ledger.total_spent() / 1_000_000
-        # A remote command's action (pause|kill) overrides the configured on_trip.
-        action = run.remote_action or self.on_trip
+        spent_micro = run.ledger.total_spent()
+        spent_usd = spent_micro / 1_000_000
+        decision = budget_decision(
+            reason, spent_micro, self.budget_micro, self.ladder, override_url=self._control_url
+        )
+        # On a trip the ladder's TERMINAL rung governs how we stop: a reserve holds an upper-bound
+        # estimate, so the fraction-based rung can read low — the trip itself is the ceiling signal.
+        if self.ladder is not None and self.ladder.rungs[-1].stops_run:
+            terminal = self.ladder.rungs[-1]
+            decision.action = terminal.actions[-1]
+            decision.ladder_rung = len(self.ladder.rungs) - 1
+            decision.threshold = terminal.threshold
+            decision.policy = f"ladder:{decision.action.value}@{terminal.threshold:.2f}"
+        # #150 ladder degrade: a graceful-stop rung returns partial results instead of killing.
+        if decision.action is LadderAction.GRACEFUL_STOP:
+            return self._graceful_stop(run, decision)
+        # A remote command (or a KILL rung) forces kill; otherwise honor the configured on_trip.
+        force_kill = decision.action is LadderAction.KILL
+        action = run.remote_action or ("kill" if force_kill else self.on_trip)
         if action == "pause" and getattr(self.app, "checkpointer", None) is None:
             action = "kill"  # can't preserve state without a checkpointer
         if action == "kill":
             report_path = self._finalize(run)
-            raise BudgetKilled(spent_usd, reason.value, report_path, list(run.side_effect_fired))
+            raise BudgetKilled(
+                spent_usd, reason.value, report_path, list(run.side_effect_fired), decision=decision
+            )
         checkpoint_id = self._checkpoint_id(run.config)
         run.eventlog.emit(
             "pause", cumulative_microusd=run.ledger.total_spent(),
-            detail={"reason": reason.value, "checkpoint_id": checkpoint_id},
+            detail={
+                "reason": reason.value, "checkpoint_id": checkpoint_id,
+                "decision": decision.to_dict(),
+            },
         )
         report_path = self._finalize(run)
         self._resumable[checkpoint_id] = run
-        raise BudgetPaused(checkpoint_id, spent_usd, reason.value, report_path)
+        raise BudgetPaused(checkpoint_id, spent_usd, reason.value, report_path, decision=decision)
+
+    def _graceful_stop(self, run: _Run, decision: TripDecision) -> GracefulStop:
+        run.eventlog.emit(
+            "graceful_stop", cumulative_microusd=run.ledger.total_spent(),
+            detail=decision.to_dict(),
+        )
+        report_path = self._finalize(run)
+        partial = None
+        try:  # partial results need a checkpointer; without one there's nothing to hand back
+            partial = getattr(self.app.get_state(run.config), "values", None)
+        except Exception:  # noqa: BLE001 - no checkpointer / not resumable => no partial state
+            partial = None
+        return GracefulStop(
+            decision, partial, spent_usd=run.ledger.total_spent() / 1_000_000,
+            report_path=report_path,
+        )
 
     def _checkpoint_id(self, config) -> str:
         state = self.app.get_state(config)
@@ -673,9 +773,10 @@ def guard(
     tags: dict | None = None,
     control_key: str | None = None,
     capability_lock: bool = False,
+    ladder: Ladder | None = None,
 ) -> GuardedApp:
     return GuardedApp(
         app, budget_usd, max_hops, ttl_seconds, velocity_usd_per_min, on_trip,
         sub_budgets, topup_policy, unknown_model, report_dir, report_to, otel,
-        detect_loops, live, max_depth, alerts, tags, control_key, capability_lock,
+        detect_loops, live, max_depth, alerts, tags, control_key, capability_lock, ladder,
     )

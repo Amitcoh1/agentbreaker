@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from breakerbox.ladder import Ladder, LadderAction, TripDecision, budget_decision
 from breakerbox.pricing import MICRO_PER_USD, PriceTable
 from breakerbox.tripwire import TripReason
 
@@ -71,6 +72,17 @@ def _model_of(msg: AIMessage, default: str) -> str:
     return rm.get("model_name") or rm.get("model") or default
 
 
+def _tool_name(t: Any) -> str | None:
+    return getattr(t, "name", None) or (t.get("name") if isinstance(t, dict) else None)
+
+
+def _narrow_tools(tools: list | None, keep: tuple[str, ...] | None) -> list:
+    """TOOL_NARROW: keep only the allow-listed tools, or drop them all (keep=None)."""
+    if keep is None:
+        return []
+    return [t for t in (tools or []) if _tool_name(t) in keep]
+
+
 class BreakerboxMiddleware(AgentMiddleware):
     """Enforce a hard dollar budget on a LangChain 1.x agent. Mirrors `guard(budget_usd=...)`.
 
@@ -96,6 +108,8 @@ class BreakerboxMiddleware(AgentMiddleware):
         model: str = "openai/gpt-4o",
         unknown_model: str = "default_rate",
         exit_behavior: str = "end",
+        ladder: Ladder | None = None,
+        swap_model: Any = None,
     ) -> None:
         super().__init__()
         if budget_usd <= 0:
@@ -107,6 +121,10 @@ class BreakerboxMiddleware(AgentMiddleware):
         self.default_model = model
         self.exit_behavior = exit_behavior
         self.prices = PriceTable.load(unknown_model=unknown_model)
+        # #150 degradation ladder. swap_model is the *cheaper model instance* to switch to on a
+        # MODEL_SWAP rung (Breakerbox is codegen/no-vendor — it can't build one from a string).
+        self.ladder = ladder
+        self.swap_model = swap_model
 
     # ---- gate: runs before each model call ----
     @hook_config(can_jump_to=["end"])
@@ -123,15 +141,59 @@ class BreakerboxMiddleware(AgentMiddleware):
         spent_usd = spent / MICRO_PER_USD
         if self.exit_behavior == "error":
             raise BudgetTripped(reason.value, spent_usd)
+        decision = self._decision(reason, spent)
         cap = _usd(self.budget_micro / MICRO_PER_USD)
+        verb = "graceful stop" if decision.action is LadderAction.GRACEFUL_STOP else "tripped"
         notice = (
-            f"⏻ breakerbox: tripped ({reason.value}) — spent {_usd(spent_usd)} of {cap} "
+            f"⏻ breakerbox: {verb} ({reason.value}) — spent {_usd(spent_usd)} of {cap} "
             f"over {hops} hop(s). Next model call blocked."
         )
-        return {"jump_to": "end", "messages": [AIMessage(content=notice)], "bbx_trip": reason.value}
+        # partial results are the messages already in state; jumping to end hands them back.
+        msg = AIMessage(content=notice, additional_kwargs={"breakerbox": decision.to_dict()})
+        return {"jump_to": "end", "messages": [msg], "bbx_trip": reason.value}
 
     async def abefore_model(self, state: BreakerboxState, runtime: Any) -> dict[str, Any] | None:
         return self.before_model(state, runtime)
+
+    def _decision(self, reason: TripReason, spent: int) -> TripDecision:
+        """The explainable trip object; the ladder's terminal rung governs graceful_stop vs kill."""
+        decision = budget_decision(reason, spent, self.budget_micro, self.ladder)
+        if self.ladder is not None and self.ladder.rungs[-1].stops_run:
+            terminal = self.ladder.rungs[-1]
+            decision.action = terminal.actions[-1]
+            decision.ladder_rung = len(self.ladder.rungs) - 1
+            decision.threshold = terminal.threshold
+            decision.policy = f"ladder:{decision.action.value}@{terminal.threshold:.2f}"
+        return decision
+
+    # ---- degrade: rewrite the request before the model call (#150 model_swap / tool_narrow) ----
+    def wrap_model_call(self, request: Any, handler: Any) -> Any:
+        return handler(self._degrade(request))
+
+    async def awrap_model_call(self, request: Any, handler: Any) -> Any:
+        return await handler(self._degrade(request))
+
+    def _degrade(self, request: Any) -> Any:
+        """Apply the active ladder rung to this call: swap to the cheaper model, narrow tools.
+
+        Unlike guard()'s callback, the 1.x middleware CAN rewrite the request — this is where the
+        ladder's MODEL_SWAP / TOOL_NARROW rungs are actually enforced (VISION §3.2: degrade in-run).
+        """
+        if self.ladder is None or self.budget_micro <= 0:
+            return request
+        try:
+            spent = int(request.state.get("bbx_spent_micro", 0) or 0)
+        except Exception:  # noqa: BLE001 - never break a run reading a degrade signal
+            return request
+        rung = self.ladder.rung_for(spent / self.budget_micro)
+        if rung is None:
+            return request
+        overrides: dict[str, Any] = {}
+        if rung.has(LadderAction.MODEL_SWAP) and self.swap_model is not None:
+            overrides["model"] = self.swap_model
+        if rung.has(LadderAction.TOOL_NARROW):
+            overrides["tools"] = _narrow_tools(getattr(request, "tools", None), rung.keep_tools)
+        return request.override(**overrides) if overrides else request
 
     # ---- reconcile: runs after each model call ----
     def after_model(self, state: BreakerboxState, runtime: Any) -> dict[str, Any] | None:

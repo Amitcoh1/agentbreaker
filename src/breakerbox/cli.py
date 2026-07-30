@@ -86,9 +86,21 @@ def main(argv: list[str] | None = None) -> int:
     ini.add_argument("-o", "--output", default=".", help="output directory (default: cwd)")
     ini.add_argument("--name", default=None, help="output basename (default: template name)")
 
+    sr = sub.add_parser("shadow-report", help="aggregate would-trip events from shadow-mode runs")
+    sr.add_argument("--dir", default="./breakerbox_reports", help="report dir to scan")
+    sr.add_argument("--json", action="store_true", help="emit JSON instead of a text summary")
+
     args = parser.parse_args(argv)
     if args.command == "update-prices":
         return pricing_update.run(source=args.source, output=args.output, dry_run=args.dry_run)
+    if args.command == "shadow-report":
+        import json as _json
+
+        from breakerbox.report.shadow import aggregate_shadow, render_shadow
+
+        summary = aggregate_shadow(args.dir)
+        print(_json.dumps(summary) if args.json else render_shadow(summary))
+        return 0
     if args.command == "validate":
         from breakerbox import graphspec
 

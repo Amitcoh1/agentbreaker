@@ -188,3 +188,35 @@ def test_graceful_stop_notice_carries_explainable_decision():
     d = notices[-1].additional_kwargs["breakerbox"]  # the explainable object rides on the message
     assert d["action"] == "graceful_stop" and d["reason"] == "budget"
     assert d["policy"] == "ladder:graceful_stop@1.00"
+
+
+class _BoundedModel(BaseChatModel):
+    """Loops (tool-calls) for stop_after hops, then answers — so a shadow run ends on its own."""
+
+    stop_after: int = 6
+
+    @property
+    def _llm_type(self) -> str:
+        return "bounded-fake"
+
+    def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+        n = sum(1 for m in messages if isinstance(m, AIMessage))
+        return ChatResult(generations=[ChatGeneration(message=_msg(n < self.stop_after, n))])
+
+    def bind_tools(self, tools, **kwargs):
+        return self
+
+
+def test_shadow_records_would_trip_and_never_blocks():
+    seen = []
+    agent = create_agent(
+        model=_BoundedModel(stop_after=6),
+        tools=[noop],
+        middleware=[BreakerboxMiddleware(budget_usd=round(3 * COST / 1e6, 6), model=MODEL,
+                                         shadow=True, on_would_trip=seen.append)],
+    )
+    result = agent.invoke({"messages": [HumanMessage("go")]}, {"recursion_limit": 40})
+    assert not _trips(result["messages"])  # shadow never blocks the run
+    assert any(w["reason"] == "budget" and w["shadow"] for w in seen)  # but records the would-trip
+    calls = sum(1 for m in result["messages"] if isinstance(m, AIMessage) and m.tool_calls)
+    assert calls > 3  # ran past the 3-call budget that enforce mode would have stopped at

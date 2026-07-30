@@ -15,7 +15,7 @@ export default function Hero() {
   return (
     <div className="hero2">
       <div>
-        <span className="eyebrow">Open source · circuit breaker for AI agents</span>
+        <span className="eyebrow">Open source · runtime spend enforcement for AI agents</span>
         <h1>
           <span className="hl">Your agents</span>
           <br />
@@ -24,8 +24,9 @@ export default function Hero() {
           </span>
         </h1>
         <p className="sub2">
-          A hard dollar cap on the whole workflow, enforced between every step. When an agent
-          loops, it trips — before the bill does.
+          A spend policy enforced between every step — it trips, degrades, and stops, not just
+          alerts. The one-line cap is the hook; the moat is the provable ceiling, loop detection,
+          and degrade-before-you-die ladder you&apos;d otherwise build yourself.
         </p>
         <div className="ctas2">
           <a className="btn1" href={LINKS.dashboard}>

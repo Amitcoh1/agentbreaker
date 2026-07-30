@@ -5,7 +5,7 @@
   </picture>
 </p>
 
-<p align="center"><strong>A hard dollar budget for your LangGraph agent — in one line of code.</strong></p>
+<p align="center"><strong>Runtime spend enforcement for AI agents — trip, degrade, and stop, not just alert.</strong></p>
 
 <p align="center">A runaway retry loop that burns <code>$12.63</code> unguarded stops at <code>$0.82</code>.<br>In-process — no proxy, no gateway, no stored keys.</p>
 
@@ -26,15 +26,19 @@
   <img src="docs/brand/shots/demo.gif" alt="A guarded LangGraph run tripping at $0.82 of a $0.90 budget — next hop blocked, 0 side effects fired" width="820">
 </p>
 
-Wrap the compiled LangGraph app you already have in `guard()` — a hierarchical dollar budget
-that stops a runaway loop at a hop boundary (never mid-call) and writes a receipt of exactly
-where the money went. In the [bundled demo](#the-demo), a retry loop that burns **$12.63**
-unguarded stops at **$0.82**. Enforcement lives *inside* your process — no proxy, no gateway,
-no server of ours ever sees your keys or your data. Three things make it different:
+Wrap the compiled LangGraph app you already have in `guard()` and it **enforces** a spend policy
+between every step. The one-line dollar cap is the hook — a 33-star side project reinvented that in
+~400 lines. The part you can't build in an afternoon is everything else. In the
+[bundled demo](#the-demo), a retry loop that burns **$12.63** unguarded stops at **$0.82**.
+Enforcement lives *inside* your process — no proxy, no gateway, no server of ours ever sees your
+keys or your data. What teams don't self-build:
 
-1. **Provable, not just observed.** It proves your agent's *maximum* cost *before* it runs.
-   Budget escrow, a static cost ceiling, runaway guards, and policy-as-code are part of the
-   artifact — not a dashboard you read after the money's gone.
+1. **Enforce, don't just alert — and degrade before you die.** A *provable* worst-case cost ceiling
+   *before* the run; semantic loop detection that catches the runaway your stop-condition misses;
+   hierarchical budget escrow; a **degradation ladder** that swaps to a cheaper model and narrows
+   tools at 80% before a graceful stop at 100%; and **shadow mode** to see what *would* trip before
+   you enforce anything. Plus a security suite that scans the flow for embedded creds and audits MCP
+   configs — findings you can prove, not just observe.
 2. **In-process — nothing to compromise.** No proxy or gateway executes your flows; no provider
    key is ever stored or transmitted. (See [Why no Run button?](#why-no-run-button))
 3. **Code you own.** The output is readable, hand-editable Python — scaffolding, not a walled

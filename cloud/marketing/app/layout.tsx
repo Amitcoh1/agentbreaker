@@ -1,7 +1,6 @@
 import "./marketing.css";
 import type { ReactNode } from "react";
 import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
-import AnnouncementBar from "@/components/AnnouncementBar";
 
 // Merged root layout for the standalone marketing app. Inter is the body font (--font-sans →
 // marketing --body); Space Grotesk (--font-display) and JetBrains Mono (--font-jbmono) are the
@@ -39,10 +38,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${sans.variable} ${display.variable} ${jbmono.variable}`}>
       <body>
-        <div className="mkt">
-          <AnnouncementBar />
-          {children}
-        </div>
+        <div className="mkt">{children}</div>
       </body>
     </html>
   );

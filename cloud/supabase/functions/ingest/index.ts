@@ -125,6 +125,22 @@ Deno.serve(async (req) => {
       { onConflict: "run_id", ignoreDuplicates: true },
     );
 
+  // Object-level authz: bind this run to the caller before writing anything. The upsert above kept
+  // the first-sighting owner, so read it back and require it to match this key — otherwise a shared
+  // or other-account key could forge events onto someone else's owned run, whose receipt is
+  // world-readable at /r/<run_id>. This mirrors the owner scope already on the summary update below.
+  if (body.events?.length || body.summary) {
+    const { data: existing, error: ownErr } = await supabase
+      .from("runs")
+      .select("owner_id")
+      .eq("run_id", run_id)
+      .maybeSingle();
+    if (ownErr) return new Response(ownErr.message, { status: 500 });
+    if ((existing?.owner_id ?? null) !== ownerId) {
+      return new Response("forbidden: run owned by another account", { status: 403 });
+    }
+  }
+
   if (body.events?.length) {
     const rows = body.events.map((e) => ({
       run_id,

@@ -30,7 +30,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -e ".[dev,otel,langchain1]"
+      # deepagents drives the #148 modern-agent demo test (importorskip-gated, runs only here).
+      - run: pip install -e ".[dev,otel,langchain1]" deepagents
       # guard against the extra silently resolving to 0.3 — this leg is meaningless on old langchain.
       - run: python -c "import langchain_core as c; assert c.__version__[0] == '1', c.__version__"
       - run: pytest -q

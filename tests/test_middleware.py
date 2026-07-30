@@ -87,3 +87,104 @@ def test_exit_behavior_error_raises():
     with pytest.raises(BudgetTripped) as exc:
         agent.invoke({"messages": [HumanMessage("go")]}, {"recursion_limit": 50})
     assert exc.value.reason == "budget"
+
+
+# --- #150 degradation ladder on the 1.x middleware --------------------------
+from breakerbox.ladder import Ladder, LadderAction, Rung  # noqa: E402
+
+CHEAPER = "openai/gpt-4o-mini"
+
+
+class _NamedModel(BaseChatModel):
+    """A looping fake model that stamps a configurable model_name on each reply."""
+
+    tag: str = MODEL
+
+    @property
+    def _llm_type(self) -> str:
+        return "named-fake"
+
+    def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+        n = sum(1 for m in messages if isinstance(m, AIMessage))
+        msg = AIMessage(
+            content="working...",
+            tool_calls=[{"name": "noop", "args": {}, "id": f"c{n}"}],
+            usage_metadata={"input_tokens": 100, "output_tokens": 50, "total_tokens": 150},
+            response_metadata={"model_name": self.tag},
+        )
+        return ChatResult(generations=[ChatGeneration(message=msg)])
+
+    def bind_tools(self, tools, **kwargs):
+        return self
+
+
+def test_ladder_swaps_to_cheaper_model_past_threshold():
+    # real model_swap: past 80% of budget wrap_model_call rewrites request.model to the cheaper one.
+    cheaper = _NamedModel(tag=CHEAPER)
+    ladder = Ladder(rungs=(Rung(0.80, (LadderAction.MODEL_SWAP,), swap_model=CHEAPER),))
+    # max_hops stops the run cleanly a couple hops after the swap (cheaper calls barely add spend).
+    agent = create_agent(
+        model=_NamedModel(tag=MODEL),
+        tools=[noop],
+        middleware=[BreakerboxMiddleware(budget_usd=0.006, max_hops=9, model=MODEL, ladder=ladder,
+                                         swap_model=cheaper)],
+    )
+    result = agent.invoke({"messages": [HumanMessage("go")]}, {"recursion_limit": 40})
+    names = [
+        m.response_metadata.get("model_name")
+        for m in result["messages"]
+        if isinstance(m, AIMessage) and (m.response_metadata or {}).get("model_name")
+    ]
+    assert names[0] == MODEL  # started on the expensive model
+    assert CHEAPER in names  # degraded to the cheaper model in-run
+    assert names.index(MODEL) < names.index(CHEAPER)  # expensive first, then the swap
+
+
+class _T:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+
+class _FakeReq:
+    """Minimal stand-in for a 1.x ModelRequest with the immutable .override() contract."""
+
+    def __init__(self, state, tools, model):
+        self.state, self.tools, self.model = state, tools, model
+
+    def override(self, **kw):
+        return _FakeReq(self.state, kw.get("tools", self.tools), kw.get("model", self.model))
+
+
+def test_degrade_narrows_tools_and_skips_swap_without_instance():
+    lad = Ladder(
+        rungs=(
+            Rung(
+                0.80,
+                (LadderAction.MODEL_SWAP, LadderAction.TOOL_NARROW),
+                swap_model=CHEAPER,
+                keep_tools=("safe",),
+            ),
+        )
+    )
+    mw = BreakerboxMiddleware(budget_usd=1.0, ladder=lad, swap_model=None)  # no cheaper instance
+    tools = [_T("safe"), _T("risky")]
+    below = _FakeReq({"bbx_spent_micro": 100_000}, tools, "orig")  # 10% of $1 -> no rung
+    assert mw._degrade(below) is below
+    above = _FakeReq({"bbx_spent_micro": 900_000}, tools, "orig")  # 90% -> rung active
+    out = mw._degrade(above)
+    assert [t.name for t in out.tools] == ["safe"]  # narrowed to the allow-list
+    assert out.model == "orig"  # swap skipped — no swap_model instance was provided
+
+
+def test_graceful_stop_notice_carries_explainable_decision():
+    ladder = Ladder(rungs=(Rung(1.00, (LadderAction.GRACEFUL_STOP,)),))
+    agent = _agent(True, budget_usd=round(3 * COST / 1e6, 6), model=MODEL, ladder=ladder)
+    result = agent.invoke({"messages": [HumanMessage("go")]}, {"recursion_limit": 50})
+    notices = [
+        m for m in result["messages"]
+        if isinstance(m, AIMessage) and "graceful stop" in (m.content or "")
+    ]
+    assert notices  # degraded to a graceful stop, not a bare trip
+    d = notices[-1].additional_kwargs["breakerbox"]  # the explainable object rides on the message
+    assert d["action"] == "graceful_stop" and d["reason"] == "budget"
+    assert d["policy"] == "ladder:graceful_stop@1.00"

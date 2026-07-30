@@ -90,6 +90,14 @@ def main(argv: list[str] | None = None) -> int:
     sr.add_argument("--dir", default="./breakerbox_reports", help="report dir to scan")
     sr.add_argument("--json", action="store_true", help="emit JSON instead of a text summary")
 
+    cc = sub.add_parser("claudecode", help="install Breakerbox budget hooks into Claude Code")
+    ccsub = cc.add_subparsers(dest="cc_command", required=True)
+    cci = ccsub.add_parser("init", help="install/refresh the hooks in .claude/settings.json")
+    cci.add_argument("-o", "--dir", default=".", help="project dir (default: cwd)")
+    cci.add_argument("--session-ceiling", type=float, default=5.0, help="per-session USD ceiling")
+    cci.add_argument("--daily-ceiling", type=float, default=50.0, help="per-day USD ceiling")
+    cci.add_argument("--otel", default=None, help="local OTel collector endpoint (optional)")
+
     args = parser.parse_args(argv)
     if args.command == "update-prices":
         return pricing_update.run(source=args.source, output=args.output, dry_run=args.dry_run)
@@ -100,6 +108,16 @@ def main(argv: list[str] | None = None) -> int:
 
         summary = aggregate_shadow(args.dir)
         print(_json.dumps(summary) if args.json else render_shadow(summary))
+        return 0
+    if args.command == "claudecode":
+        from breakerbox import claudecode as _cc
+
+        summary = _cc.init(args.dir, args.session_ceiling, args.daily_ceiling, args.otel)
+        print(f"breakerbox: Claude Code hooks installed -> {summary['settings_path']}")
+        print(
+            f"  session ceiling ${summary['session_ceiling']:.2f} · "
+            f"daily ceiling ${summary['daily_ceiling']:.2f}"
+        )
         return 0
     if args.command == "validate":
         from breakerbox import graphspec

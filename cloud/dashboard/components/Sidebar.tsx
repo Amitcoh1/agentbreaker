@@ -3,13 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Blocks, LayoutDashboard, ListChecks, LogOut, Settings } from "lucide-react";
+import { Blocks, Coins, LayoutDashboard, ListChecks, LogOut, Settings } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import ThemeToggle from "./ThemeToggle";
 
 const items = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/runs", label: "Runs", icon: ListChecks },
+  { href: "/dashboard/spend", label: "Spend", icon: Coins },
   { href: "/dashboard/builder", label: "Builder", icon: Blocks },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];

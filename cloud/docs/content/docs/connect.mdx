@@ -1,0 +1,87 @@
+---
+title: Connect your agent (15 min)
+description: Stream your guarded runs to the hosted dashboard, watch spend live, read the shadow report, and graduate to enforcement — all from your own process. No keys leave your machine.
+---
+
+This is the design-partner path: from "my agent runs somewhere" to a **live spend view + a "what
+would have tripped this week" report** in about 15 minutes — then flip enforcement on with a one-line
+change. Everything runs **in your process**; Breakerbox's cloud only ingests events and issues
+pause/kill. Your provider keys never touch it.
+
+## Before you start
+- Breakerbox installed and wrapping your app already — see [Quickstart](/docs/quickstart). If you
+  haven't wrapped it yet, do that first; this page only adds the hosted view.
+- A Breakerbox dashboard account (the same one you sign into with GitHub/Google).
+
+## 1. Create an ingest key
+In the dashboard, go to **Settings → Create ingest key**. You get an `abk_…` key, **shown once** —
+copy it now. It authorizes writes for *your* account only (runs are owner-scoped by row-level
+security; nobody else can read them).
+
+## 2. Point your app at the ingest endpoint
+Set the key in your environment and add `report_to` to your existing `guard()` call:
+
+```bash
+export BREAKERBOX_INGEST_KEY=abk_xxxxxxxxxxxxxxxx
+```
+
+```python
+from breakerbox import guard
+
+app = guard(
+    compiled,
+    budget_usd=5.00,
+    report_to="https://YOUR_PROJECT_REF.functions.supabase.co/ingest",  # your project's ingest fn
+    shadow=True,          # observe only — nothing is enforced yet (step 3)
+)
+```
+
+`report_to` is the only wiring needed — the event sink is best-effort and on a background thread, so
+a network blip never breaks a run, and the library stays fully useful with it unset. The live
+pause/kill endpoint is derived automatically (`…/ingest` → `…/control`).
+
+<Callout>On LangChain 1.x, pass the same options to `BreakerboxMiddleware(..., report_to=…, shadow=True)` instead of `guard()`.</Callout>
+
+## 3. Start in shadow mode
+`shadow=True` records a `would_trip` event whenever a policy *would* have fired — and enforces
+nothing. Your runs behave exactly as before; you're just collecting evidence. Run your normal
+workload for a few days.
+
+## 4. Watch runs live
+Open **Runs** in the dashboard. Each run streams in with its per-hop cost, cumulative spend, and — on
+a would-trip — the explainable decision (reason, policy, the % of budget it crossed). Open **Spend**
+to see the same money rolled up by model, agent, and day, with per-run estimate-vs-actual drift.
+
+## 5. Read the shadow report
+After a week, open **Shadow**. It answers one question: *what would enforcement have done?* — how
+many runs would have tripped, the top reasons, and the **dollars that were spent after the point a
+policy would have stopped the run**. That number is your ROI, measured on your own traffic before you
+change anything.
+
+## 6. Graduate to enforcement
+When the shadow numbers look right, turn it on with a one-line change — drop `shadow=True` and choose
+an `on_trip` action:
+
+```python
+app = guard(
+    compiled,
+    budget_usd=5.00,
+    report_to="https://YOUR_PROJECT_REF.functions.supabase.co/ingest",
+    on_trip="pause",      # checkpoint + resume(); or "kill" to stop and list side-effects fired
+    # ladder=Ladder.default("openai/gpt-4o-mini"),  # optional: degrade before you stop
+)
+```
+
+The ceiling is now real: the run stops at the next hop boundary (never mid-call) and writes a
+receipt. The [guard() reference](/docs/reference) covers every knob (`max_hops`, `detect_loops`,
+`velocity_usd_per_min`, `capability_lock`, the degradation ladder).
+
+## 7. Pause or kill a live run
+From a run's detail page, **Controls** issues a remote pause/kill; your process picks it up at the
+next hop (it polls the derived control endpoint). Authorization is your dashboard session, or an
+optional per-run `BREAKERBOX_CONTROL_KEY` for operators/CI.
+
+## What you end up with
+A single tenant — you — with events flowing from a real workload → a live spend view → a shadow
+report that quantifies what enforcement would save → enforcement on, remotely controllable. No proxy
+executes your flow, and no provider key ever leaves your process.

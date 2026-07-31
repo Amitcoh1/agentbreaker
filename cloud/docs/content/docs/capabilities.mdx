@@ -1,0 +1,130 @@
+---
+title: Capabilities
+description: Everything Breakerbox does, on one page — one enforcement core, three front-ends, a static/CI half, and an optional cloud. With honest maturity labels.
+---
+
+This is the whole surface. Breakerbox is **runtime spend enforcement for AI agents** — trip,
+degrade, and stop, not just alert. Where a feature is partial or unfinished, this page says so.
+
+**Legend:** ✅ shipped (real + tested) · 🟡 partial (works, named limit) · 🟧 stub/UI-only.
+
+## The mental model
+
+1. **One enforcement core** with **8 trip reasons** — `budget · hops · ttl · velocity · depth · loop · capability · remote`.
+2. **Three front-ends** to attach it — `guard()` (LangGraph), `BreakerboxMiddleware` (LangChain 1.x), `claudecode` hooks (Claude Code itself).
+3. **A static / CI half** that proves cost and scans for risk **without running your agent** (zero API calls).
+4. **An optional cloud** that only observes and generates code — no proxy runs your flow, no key is ever stored.
+
+## 1. Enforce at runtime — `guard(...)`
+
+One wrap on a compiled LangGraph app. Accounting is **reserve → execute → reconcile** (a credit-card
+hold), so parallel branches can't race past the ceiling. All ✅. Full parameter list in the
+[guard() reference](/docs/reference).
+
+| Knob | What it does |
+|---|---|
+| `budget_usd` | Hard dollar ceiling, held before each call |
+| `sub_budgets` | Per-node escrow; a child can't exceed its slice |
+| `max_hops` / `max_depth` | Total dispatch cap / sub-agent nesting cap |
+| `ttl_seconds` | Wall-clock cap (🟡 soft — enforced at the next hop) |
+| `velocity_usd_per_min` | Burn-rate rail, 60s rolling (🟡 soft — next hop) |
+| `detect_loops` | Semantic repeat detection, **no LLM** |
+| `capability_lock` | After untrusted input, block side-effecting tools **before** they fire |
+| `on_trip` | `pause` (checkpoint + `resume()`) or `kill` (lists side-effects fired) |
+| `ladder` | Degradation rungs — model-swap / tool-narrow / graceful-stop / kill |
+| `shadow` | Observe-only: logs `would_trip`, enforces nothing |
+| `live` / `alerts` / `otel` / `tags` | Live spend line · threshold warnings · [OTel spans](/docs/otel) · attribution |
+
+```python
+from breakerbox import guard
+
+app = guard(compiled, budget_usd=5.00, sub_budgets={"researcher": 2.0},
+            detect_loops=True, capability_lock=True, on_trip="pause")
+app.invoke(state)   # raises BudgetPaused / BudgetKilled at the boundary
+```
+
+The **8 trip reasons**: `BUDGET · HOPS · TTL · VELOCITY · DEPTH · LOOP · CAPABILITY · REMOTE`. Every
+trip yields an explainable **`TripDecision`** (stable JSON: reason, policy, threshold, % spent,
+ladder rung, confidence, override URL).
+
+## 2. Three front-ends
+
+| Front-end | For | Notes |
+|---|---|---|
+| **`guard()`** | LangGraph | ✅ Full enforcement — all 8 trip reasons. The ladder is *advisory* here. |
+| **`BreakerboxMiddleware`** | LangChain 1.x | 🟡 **Phase 1 = budget + max_hops.** The only front-end that can *rewrite the request* (real model-swap / tool-narrow). |
+| **`breakerbox claudecode init`** | Claude Code | ✅ Session + daily dollar ceilings via local hooks. No server, no keys. |
+
+## 3. Degrade & explain
+
+- **Ladder** — rungs at fractional thresholds → `MODEL_SWAP` / `TOOL_NARROW` / `GRACEFUL_STOP` /
+  `KILL`. `Ladder.default()` = swap + narrow at 80%, graceful stop at 100%. Enforced in the
+  middleware; advisory in `guard()`.
+- **Shadow mode** — `shadow=True` records what *would* trip; `breakerbox shadow-report` reports
+  *"enforcement would have prevented $X."* The adoption on-ramp.
+- **The [receipt](/docs/receipts)** — single-file `report.html` + JSON from the event log: per-hop
+  cost, trip reason, projected-vs-spent (`saved_usd`), and the **blast radius** (side-effecting tools
+  that fired).
+
+## 4. Prove cost before you run (zero API calls)
+
+See [Gate cost in CI](/docs/ci-gate).
+
+| Command | What it gives you |
+|---|---|
+| `breakerbox ceiling spec.json --max 5` | ✅ Provable worst-case ceiling (or `UNBOUNDED` — never invents a number) |
+| `breakerbox lock --check` | ✅ Pin prices + ceilings; fail CI on drift |
+| `breakerbox diff old new --fail-on-increase` | ✅ Cost delta between commits as a PR gate |
+| `breakerbox policy *.json -p breakerbox.yaml` | ✅ Policy-as-code (max ceiling, banned models, require-bounded…) |
+| `breakerbox egress spec.json` | ✅ Static network-egress certificate (air-gap check) |
+
+## 5. Security suite (0.11.0)
+
+All ✅, one shared finding format, composable into CI. See [Security](/docs/security).
+
+| Command | Finds |
+|---|---|
+| `breakerbox dow` | Denial-of-wallet — uncapped loops, priced worst case |
+| `breakerbox flow` | Langflow exports: embedded creds + untrusted→action with no approval gate |
+| `breakerbox mcp` | MCP config: hardcoded secrets, unpinned `@latest` supply chain, non-TLS |
+| `breakerbox baseline` | Accept findings once; CI fails only on *new* ones |
+
+Runtime primitive: **`capability_lock=True` + `mark_untrusted(tool)`** — once untrusted content
+enters the run, side-effecting tools are blocked **before** they execute.
+
+## 6. Build & scaffold
+
+`breakerbox init` (templates) · `validate` · `build` (spec → readable guarded Python) · a
+drag-and-drop [visual builder](/docs/builder) whose TypeScript codegen is **byte-identical** to the
+CLI's (locked by golden fixtures in both pytest and vitest).
+
+## 7. Optional cloud
+
+Codegen and observation only — no proxy executes your flow.
+
+| Feature | Status |
+|---|---|
+| Runs list + live timeline, DecisionCard, shadow badge | ✅ real data, RLS-scoped |
+| Remote pause / kill (per-run control keys) | ✅ |
+| Visual builder (React Flow → guarded Python) | ✅ codegen only, keys never leave the browser |
+| Auth (Google / GitHub OAuth + magic link) | ✅ |
+| Shareable receipt links | 🟡 JSON live; HTML rendering not yet wired |
+| Dashboard dry-run simulator | 🟧 UI only |
+
+## Honest gaps
+
+- `BreakerboxMiddleware` is Phase 1 (budget + hops); the rest is `guard()`-only for now.
+- Ladder model-swap / tool-narrow only *enforce* in the middleware; advisory in `guard()`.
+- `ttl_seconds` + `velocity_usd_per_min` are soft (enforced at the next hop, not mid-stream).
+- `alerts` has no native Slack/email — it's a callback; you wire the channel.
+- Cloud shareable-receipt HTML is partial; the dashboard dry-run simulator is a stub.
+- No per-model spend cap — only the global budget.
+
+## The full CLI (15 commands)
+
+```
+ceiling · lock · diff · policy · egress          # cost & CI
+dow · flow · mcp · baseline                       # security
+init · validate · build                           # build & spec
+shadow-report · claudecode · update-prices        # ops
+```

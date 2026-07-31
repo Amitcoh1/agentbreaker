@@ -50,6 +50,7 @@ keys or your data. What teams don't self-build:
 
 ## Contents
 
+- [Capabilities at a glance](#capabilities-at-a-glance)
 - [Quickstart](#quickstart)
 - [The demo](#the-demo)
 - [What it actually does](#what-it-actually-does)
@@ -63,6 +64,26 @@ keys or your data. What teams don't self-build:
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
 - [License](#license)
+
+## Capabilities at a glance
+
+The whole surface on one screen — **[full catalog with maturity labels → `CAPABILITIES.md`](CAPABILITIES.md)**.
+One enforcement core, three ways to attach it, and a static half that never runs your agent.
+
+| Area | What you get |
+|---|---|
+| **Enforce at runtime** — `guard(...)` | Hard `budget_usd` · hierarchical `sub_budgets` · `max_hops` / `max_depth` / `ttl_seconds` · `velocity_usd_per_min` burn-rate · **8 trip reasons** |
+| **Catch runaways** | `detect_loops=True` — semantic repeat detection, **no LLM** |
+| **Degrade, don't die** | `ladder` — swap to a cheaper model + narrow tools at 80%, graceful stop at 100% |
+| **Trip actions** | `on_trip="pause"` → checkpoint + `resume()`, or `"kill"` → lists side-effects that fired |
+| **Try before you enforce** | `shadow=True` → logs what *would* trip; `breakerbox shadow-report` → "$ prevented" |
+| **Explain every stop** | `TripDecision` (stable JSON) + single-file HTML **receipt** (per-hop cost, trip reason, blast radius) |
+| **Prove cost before running** | `breakerbox ceiling` (or `UNBOUNDED`) · `lock --check` · `diff --fail-on-increase` · `policy` · `egress` |
+| **Security suite** (0.11.0) | `breakerbox dow` (denial-of-wallet) · `flow` (Langflow creds) · `mcp` (server posture) · `baseline` (CI gate) · `capability_lock` |
+| **Attach it 3 ways** | `guard()` (LangGraph) · `BreakerboxMiddleware` (LangChain 1.x) · `breakerbox claudecode init` (Claude Code) |
+| **Observe** | `live` spend line · `alerts` · `otel` spans · `tags` for per-team attribution |
+| **Build** | `breakerbox init` / `validate` / `build` · a drag-and-drop visual builder that emits the same guarded Python |
+| **Optional cloud** | Live runs dashboard · remote pause/kill · shareable receipts — codegen/observe only, no keys stored |
 
 ## Quickstart
 

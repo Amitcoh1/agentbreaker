@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "breakerbox"
-version = "0.11.0"
+version = "1.0.0"
 description = "Runtime spend enforcement for AI agents — trip, degrade, and stop, not just alert. Provable ceilings, loop detection, escrow, and security scanning."
 readme = "README.md"
 requires-python = ">=3.11"

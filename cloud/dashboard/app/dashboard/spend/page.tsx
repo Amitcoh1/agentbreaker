@@ -1,6 +1,7 @@
 import { Boxes, Coins, Ruler, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { ChartCard, SpendOverTime } from "@/components/Charts";
+import { EmptyState } from "@/components/EmptyState";
 import { StatCard, StatGrid } from "@/components/StatCard";
 import { microToUsd, shortId, usd } from "@/lib/format";
 import type { DailySpend } from "@/lib/supabase";
@@ -68,6 +69,21 @@ export default async function Spend() {
     .gte("ts", since)
     .limit(20_000);
   const events = (evData ?? []) as unknown as EvRow[];
+
+  if (events.length === 0) {
+    return (
+      <div className="space-y-6 p-6 lg:p-8">
+        <header>
+          <h1 className="text-lg font-semibold">Spend</h1>
+          <p className="text-sm text-muted">Your spend by model, agent, and day.</p>
+        </header>
+        <EmptyState
+          title="No spend yet"
+          hint="Once a guarded agent reports here, this page breaks its cost down by model, agent, and day — and flags per-run estimate-vs-actual drift."
+        />
+      </div>
+    );
+  }
 
   const byModel = new Map<string, { spent: number; calls: number }>();
   const byNode = new Map<string, number>();

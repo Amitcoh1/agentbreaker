@@ -1,6 +1,7 @@
 import { AlertTriangle, Eye, ListChecks, PiggyBank } from "lucide-react";
 import Link from "next/link";
 import { ChartCard } from "@/components/Charts";
+import { EmptyState } from "@/components/EmptyState";
 import { StatCard, StatGrid } from "@/components/StatCard";
 import { microToUsd, shortId, usd } from "@/lib/format";
 import { aggregateShadow, type ShadowEvent } from "@/lib/shadow";
@@ -31,6 +32,21 @@ export default async function Shadow() {
     .gte("ts", since)
     .limit(20_000);
   const s = aggregateShadow((data ?? []) as unknown as ShadowEvent[]);
+
+  if (s.runs_scanned === 0) {
+    return (
+      <div className="space-y-6 p-6 lg:p-8">
+        <header>
+          <h1 className="text-lg font-semibold">Shadow report</h1>
+          <p className="text-sm text-muted">What enforcement would have done — nothing is enforced.</p>
+        </header>
+        <EmptyState
+          title="No shadow runs yet"
+          hint="Run with shadow=True and this page shows what enforcement would have caught — and the spend it would have prevented — before you turn it on."
+        />
+      </div>
+    );
+  }
 
   const reasons = Object.entries(s.by_reason).sort(([, a], [, b]) => b - a);
   const topReason = reasons[0]?.[0] ?? "—";
@@ -65,14 +81,7 @@ export default async function Shadow() {
         <StatCard label="Runs scanned" value={String(s.runs_scanned)} sub={`last ${WINDOW_DAYS} days`} icon={ListChecks} />
       </StatGrid>
 
-      {s.runs_scanned === 0 ? (
-        <div className="card p-6 text-sm text-muted">
-          No runs in the last {WINDOW_DAYS} days. Start a run with{" "}
-          <code className="rounded bg-ink/5 px-1.5 py-0.5 text-xs">shadow=True</code> and its would-trip
-          events will show up here.
-        </div>
-      ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
           <ChartCard title="Would-trip by reason" sub="what enforcement would have caught">
             {reasons.length === 0 ? (
               <div className="text-xs text-muted">Nothing would have tripped in this window.</div>
@@ -114,7 +123,6 @@ export default async function Shadow() {
             )}
           </ChartCard>
         </div>
-      )}
 
       <div className="card space-y-2 p-5">
         <div className="text-sm font-semibold">Ready to graduate?</div>

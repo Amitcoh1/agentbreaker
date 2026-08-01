@@ -128,6 +128,25 @@ export default function LandingV3() {
   const [tab, setTab] = useState(0);
   const [copied, setCopied] = useState(false);
   const [runKey, setRunKey] = useState(0);
+  const [launch, setLaunch] = useState(false);
+
+  // 1.0.0 launch banner — rendered only after mount (no SSR flash) and only if not yet dismissed.
+  // The slide-in + brass sheen are pure CSS and honor prefers-reduced-motion (globally neutralized).
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("bb_v1_launch_dismissed") !== "1") setLaunch(true);
+    } catch {
+      setLaunch(true);
+    }
+  }, []);
+  const dismissLaunch = () => {
+    setLaunch(false);
+    try {
+      localStorage.setItem("bb_v1_launch_dismissed", "1");
+    } catch {
+      /* storage blocked — no-op */
+    }
+  };
 
   useEffect(() => {
     const reduced =
@@ -246,6 +265,27 @@ export default function LandingV3() {
   return (
     <div className="v3" ref={rootRef}>
       <div className="v3-progress" ref={progressRef} aria-hidden="true" />
+      {/* ---- 1.0.0 launch banner ---- */}
+      {launch && (
+        <div className="v3-launch" role="status">
+          <span className="v3-launch-dot" aria-hidden="true" />
+          <span className="v3-launch-chip">v1.0.0</span>
+          <span className="v3-launch-msg">
+            Breakerbox <strong>1.0.0</strong> is live — the public API is now stable.
+          </span>
+          <a href={`${LINKS.github}/releases/tag/v1.0.0`} target="_blank" rel="noopener noreferrer">
+            Read the release →
+          </a>
+          <button
+            type="button"
+            className="v3-launch-x"
+            onClick={dismissLaunch}
+            aria-label="Dismiss announcement"
+          >
+            ✕
+          </button>
+        </div>
+      )}
       {/* ---- header ---- */}
       <header className="v3-header">
         <div className="v3-wrap v3-header-in">
@@ -315,7 +355,7 @@ export default function LandingV3() {
                   animation: "bbpulse 2.2s ease infinite",
                 }}
               />
-              OPEN SOURCE · MIT · v0.11.0 ON PYPI
+              OPEN SOURCE · MIT · v1.0.0 ON PYPI
             </div>
             <h1 className="v3-h1">
               Your agents <span className="v3-gt-brass">can&apos;t</span> outspend you.

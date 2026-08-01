@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/EmptyState";
 import { displayStatus, type Run } from "@/lib/supabase";
 import { shortId, timeAgo, usd } from "@/lib/format";
 
@@ -23,11 +24,7 @@ export function StatusBadge({ status, reason }: { status: string; reason?: strin
 
 export function RunsTable({ runs }: { runs: Run[] }) {
   if (!runs.length) {
-    return (
-      <div className="card p-8 text-center text-sm text-muted">
-        No runs yet. Point a guard here with <code className="text-fg">report_to=</code>.
-      </div>
-    );
+    return <EmptyState />;
   }
   return (
     <div className="card overflow-hidden">

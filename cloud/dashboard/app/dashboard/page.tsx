@@ -1,5 +1,6 @@
 import { Activity, Coins, Gauge, PiggyBank } from "lucide-react";
 import { ChartCard, SpendOverTime } from "@/components/Charts";
+import { EmptyState } from "@/components/EmptyState";
 import { RunsTable } from "@/components/RunsTable";
 import { StatCard, StatGrid } from "@/components/StatCard";
 import { microToUsd, usd } from "@/lib/format";
@@ -57,6 +58,17 @@ export default async function Overview() {
     db.from("v_spend_by_node").select("*"),
   ]);
   const rs = (runs ?? []) as Run[];
+  if (rs.length === 0) {
+    return (
+      <div className="space-y-6 p-6 lg:p-8">
+        <header>
+          <h1 className="text-lg font-semibold">Overview</h1>
+          <p className="text-sm text-muted">Cost across your guarded agent workflows.</p>
+        </header>
+        <EmptyState />
+      </div>
+    );
+  }
   const spent = rs.reduce((a, r) => a + (r.spent_usd ?? 0), 0);
   const saved = rs.reduce((a, r) => a + (r.saved_usd ?? 0), 0);
   const active = rs.filter(isActive).length;

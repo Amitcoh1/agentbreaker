@@ -90,6 +90,17 @@ def main(argv: list[str] | None = None) -> int:
     sr.add_argument("--dir", default="./breakerbox_reports", help="report dir to scan")
     sr.add_argument("--json", action="store_true", help="emit JSON instead of a text summary")
 
+    obs = sub.add_parser(
+        "observe-report", help="cost profile + a suggested budget from observe-mode runs"
+    )
+    obs.add_argument("--dir", default="./breakerbox_reports", help="report dir with observe runs")
+    obs.add_argument(
+        "--write", nargs="?", const="breakerbox.yaml",
+        help="write a suggested breakerbox.yaml (review-only; default: breakerbox.yaml)",
+    )
+    obs.add_argument("--html", help="write a shareable single-file HTML report to this path")
+    obs.add_argument("--json", action="store_true", help="emit the raw summary as JSON")
+
     cc = sub.add_parser("claudecode", help="install Breakerbox budget hooks into Claude Code")
     ccsub = cc.add_subparsers(dest="cc_command", required=True)
     cci = ccsub.add_parser("init", help="install/refresh the hooks in .claude/settings.json")
@@ -108,6 +119,31 @@ def main(argv: list[str] | None = None) -> int:
 
         summary = aggregate_shadow(args.dir)
         print(_json.dumps(summary) if args.json else render_shadow(summary))
+        return 0
+    if args.command == "observe-report":
+        import json as _json
+        from pathlib import Path as _Path
+
+        from breakerbox.observe import (
+            aggregate_observe,
+            render_observe,
+            render_observe_html,
+            suggest_policy,
+            suggested_yaml,
+        )
+
+        summary = aggregate_observe(args.dir)
+        suggestion = suggest_policy(summary)
+        if args.json:
+            print(_json.dumps({"summary": summary, "suggestion": suggestion}))
+        else:
+            print(render_observe(summary, suggestion))
+        if args.write and summary["runs"]:
+            _Path(args.write).write_text(suggested_yaml(summary, suggestion))
+            print(f"wrote {args.write} — review before use.")
+        if args.html and summary["runs"]:
+            _Path(args.html).write_text(render_observe_html(summary, suggestion))
+            print(f"wrote {args.html}")
         return 0
     if args.command == "claudecode":
         from breakerbox import claudecode as _cc

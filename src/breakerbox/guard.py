@@ -542,19 +542,37 @@ class GuardedApp:
     ) -> None:
         if on_trip not in ("pause", "kill"):
             raise ValueError(f"on_trip must be pause|kill, got {on_trip!r}")
-        if on_trip == "pause" and not shadow and getattr(app, "checkpointer", None) is None:
+        # Observe mode: guard(app) with no budget = zero-config, record real costs, enforce nothing.
+        # Reuses the shadow path (record-not-raise) with unreachable thresholds, so the enforcement
+        # hot path is untouched. `breakerbox observe-report` turns the recordings into a budget.
+        observe = budget_usd is None
+        if (
+            on_trip == "pause"
+            and not shadow
+            and not observe
+            and getattr(app, "checkpointer", None) is None
+        ):
             raise ValueError(
                 "on_trip='pause' needs the app compiled with a checkpointer "
                 "(e.g. compile(checkpointer=MemorySaver()))"
             )
 
         self.app = app
-        self.budget_micro = _to_micro(budget_usd)
-        self.max_hops = max_hops
-        self.ttl_seconds = ttl_seconds
-        self.velocity_micro_per_min = (
-            _to_micro(velocity_usd_per_min) if velocity_usd_per_min is not None else None
-        )
+        self.observe = observe
+        if observe:
+            self.budget_micro = _SHADOW_LEDGER  # unbounded → nothing blocks, nothing trips
+            self.max_hops = _SHADOW_LEDGER
+            self.ttl_seconds = None
+            self.velocity_micro_per_min = None
+            self.shadow = True  # reuse shadow's record-not-raise; the thresholds are unreachable
+        else:
+            self.budget_micro = _to_micro(budget_usd)
+            self.max_hops = max_hops
+            self.ttl_seconds = ttl_seconds
+            self.velocity_micro_per_min = (
+                _to_micro(velocity_usd_per_min) if velocity_usd_per_min is not None else None
+            )
+            self.shadow = shadow
         self.on_trip = on_trip
         self.detect_loops = detect_loops
         self.live = live
@@ -562,7 +580,6 @@ class GuardedApp:
         self.alerts = alerts
         self.capability_lock = capability_lock  # #129 downgrade to read-only after untrusted input
         self.ladder = ladder  # #150 degradation ladder (None => binary pause/kill, unchanged)
-        self.shadow = shadow  # #151 observe-only: record would-trips, enforce nothing
         self._alert_thresholds, self._alert_fn = _parse_alerts(alerts)
         self.tags = {str(k): str(v) for k, v in (tags or {}).items()}  # #85 attribution tags
         # #45 per-run control key: env fallback mirrors BREAKERBOX_INGEST_KEY.
@@ -683,8 +700,8 @@ class GuardedApp:
         eventlog.emit(
             "start",
             detail={
-                "budget_micro": self.budget_micro,
-                "max_hops": self.max_hops,
+                "budget_micro": None if self.observe else self.budget_micro,
+                "max_hops": None if self.observe else self.max_hops,
                 "ttl_seconds": self.ttl_seconds,
                 "velocity_micro_per_min": self.velocity_micro_per_min,
                 "on_trip": self.on_trip,
@@ -781,7 +798,7 @@ class GuardedApp:
 
 def guard(
     app,
-    budget_usd: float,
+    budget_usd: float | None = None,
     max_hops: int = 100,
     ttl_seconds: int | None = None,
     velocity_usd_per_min: float | None = None,

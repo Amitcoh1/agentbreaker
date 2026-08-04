@@ -5,19 +5,27 @@ import BrandMark from "./BrandMark";
 import WatchReel from "./WatchReel";
 import { LINKS } from "./links";
 
-// v3 landing — "the trip is the hero". Faithful port of the design handoff (Breakerbox Landing v3).
-// Styles live in app/v3.css (scoped under .v3); the hero live-run logic is the DCLogic class ported
-// to hooks. Values, copy, and hop data are the intended production spec. Logo (BrandMark), the reel,
-// and every destination (LINKS) are the real site's — same sources as the previous deployment.
+// v3 landing. Styles live in app/v3.css (scoped under .v3). The hero (#200) is the zero-config
+// on-ramp: guard(app) observes real cost → learns the distribution → suggests a cap you accept,
+// animated observe→learn→suggest. Sections 01–08 below carry the enforcement story (the trip, the
+// ceiling, the security suite). Logo (BrandMark), the reel, and every destination (LINKS) are the
+// real site's — same sources as the previous deployment.
 
-const HOPS = [
-  { hop: "hop 3", note: "model call", amt: "$0.09", v: 0.09, loop: false },
-  { hop: "hop 7", note: "tool call → search", amt: "$0.16", v: 0.16, loop: false },
-  { hop: "hop 9", note: "↺ repeat detected (0.91 similarity)", amt: "$0.24", v: 0.24, loop: true },
-  { hop: "hop 11", note: "↺ repeat detected (0.94 similarity)", amt: "$0.33", v: 0.33, loop: true },
-  { hop: "⏻ stop", note: "loop · next hop never dispatched", amt: "$0.82", v: 0.82, loop: true },
-];
-const CAP = 0.9;
+// Illustrative observe-mode profile — the shape `guard(app)` learns before you ever set a cap.
+// Labeled "example" in the UI; the real numbers come from `breakerbox observe-report` on your own
+// runs. Suggested cap = p95 rounded up to the cent — exactly what observe.py suggests. The numbers
+// are internally consistent (fat tail, one runaway) so nothing here overstates what observe returns.
+const OBS = {
+  runs: 214,
+  median: 0.18,
+  p95: 2.4,
+  max: 12.63, // the one runaway in the window
+  budget: 2.4, // ceil(p95) to the cent — the suggested starting cap
+  prevented: 74, // $ a $2.40 cap would have clawed back across the window, mostly that runaway
+};
+// Cost histogram, cheap→expensive buckets (fraction of the tallest). Fat tail; the last bucket is
+// the runaway, lit brass. The p95 gate sits at ~80% across.
+const OBS_HIST = [0.3, 0.72, 1.0, 0.82, 0.55, 0.38, 0.26, 0.18, 0.12, 0.09, 0.06, 0.05, 0.04, 0.14];
 const dim = (a: number) => `rgba(242,240,233,${a})`;
 
 // Every destination the previous deployment exposed, from the shared LINKS source of truth.
@@ -123,8 +131,8 @@ function CountUp({
 export default function LandingV3() {
   const rootRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
-  const [disp, setDisp] = useState(0);
-  const [step, setStep] = useState(0);
+  const [phase, setPhase] = useState(0); // 0 observe · 1 learn (profile resolves) · 2 suggest
+  const [obsRuns, setObsRuns] = useState(0);
   const [tab, setTab] = useState(0);
   const [copied, setCopied] = useState(false);
   const [runKey, setRunKey] = useState(0);
@@ -148,39 +156,32 @@ export default function LandingV3() {
     }
   };
 
+  // Observe → learn → suggest. Runs stream in (counter + histogram rise), the profile resolves
+  // (median/p95/max + the p95 gate), then the suggested cap prints. Replays on runKey. Reduced
+  // motion jumps straight to the resolved suggestion.
   useEffect(() => {
     const reduced =
       typeof window !== "undefined" &&
       window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     if (reduced) {
-      setStep(HOPS.length);
-      setDisp(0.82);
+      setPhase(2);
+      setObsRuns(OBS.runs);
       return;
     }
-    setStep(0);
-    setDisp(0);
-    let s = 0;
-    let d = 0;
-    let stepT: ReturnType<typeof setInterval> | undefined;
-    let lerpT: ReturnType<typeof setInterval> | undefined;
-    const startT = setTimeout(() => {
-      stepT = setInterval(() => {
-        s = Math.min(s + 1, HOPS.length);
-        setStep(s);
-        if (s >= HOPS.length && stepT) clearInterval(stepT);
-      }, 700);
-      lerpT = setInterval(() => {
-        const target = s > 0 ? HOPS[Math.min(s, HOPS.length) - 1].v : 0;
-        d = d + (target - d) * 0.16;
-        const done = s >= HOPS.length && Math.abs(target - d) < 0.003;
-        setDisp(done ? target : d);
-        if (done && lerpT) clearInterval(lerpT);
-      }, 40);
-    }, 700);
+    setPhase(0);
+    setObsRuns(0);
+    let n = 0;
+    const countT = setInterval(() => {
+      n = Math.min(OBS.runs, n + Math.ceil((OBS.runs - n) * 0.14) + 1);
+      setObsRuns(n);
+      if (n >= OBS.runs) clearInterval(countT);
+    }, 34);
+    const learnT = setTimeout(() => setPhase(1), 1200);
+    const suggestT = setTimeout(() => setPhase(2), 2400);
     return () => {
-      clearTimeout(startT);
-      if (stepT) clearInterval(stepT);
-      if (lerpT) clearInterval(lerpT);
+      clearInterval(countT);
+      clearTimeout(learnT);
+      clearTimeout(suggestT);
     };
   }, [runKey]);
 
@@ -257,8 +258,9 @@ export default function LandingV3() {
     setTimeout(() => setCopied(false), 1600);
   };
   const copyLabel = copied ? "copied ✓" : "pip install breakerbox";
-  const done = step >= HOPS.length;
-  const spentPct = Math.min(100, Math.round((disp / CAP) * 1000) / 10);
+  const learned = phase >= 1; // profile has resolved
+  const suggested = phase >= 2; // a cap has been proposed
+  const obsProgress = Math.min(1, obsRuns / OBS.runs);
   const tabColor = (i: number) => (tab === i ? "#f2f0e9" : "rgba(242,240,233,0.5)");
   const tabBorder = (i: number) => (tab === i ? "#d4a017" : "transparent");
 
@@ -358,12 +360,14 @@ export default function LandingV3() {
               OPEN SOURCE · MIT · v1.0.0 ON PYPI
             </div>
             <h1 className="v3-h1">
-              Your agents <span className="v3-gt-brass">can&apos;t</span> outspend you.
+              One wrap. <span className="v3-gt-brass">It learns what you spend.</span>
             </h1>
-            <p className="v3-lede" style={{ maxWidth: "50ch", margin: "0 0 40px", fontSize: "clamp(17px,1.6vw,21px)", color: dim(0.64) }}>
-              A circuit breaker for AI agents. One wrap around your LangGraph app and the dollar cap
-              is enforced <em style={{ color: "#f2f0e9", fontStyle: "normal" }}>inside your process</em>,
-              between every hop — not observed on a dashboard after the invoice lands.
+            <p className="v3-lede" style={{ maxWidth: "52ch", margin: "0 0 40px", fontSize: "clamp(17px,1.6vw,21px)", color: dim(0.64) }}>
+              <code style={{ fontFamily: "var(--font-jbmono)", fontSize: "0.9em", color: "#f2f0e9" }}>guard(app)</code>{" "}
+              with no budget is observe mode — nothing enforced. It records the real dollar cost of
+              every run, learns your true distribution, and hands you a cap to accept.{" "}
+              <em style={{ color: "#f2f0e9", fontStyle: "normal" }}>Then</em> it enforces that number
+              in-process, between every hop.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginBottom: 18 }}>
               <button type="button" className="v3-cta" onClick={copyInstall}>
@@ -371,6 +375,9 @@ export default function LandingV3() {
               </button>
               <a className="v3-ghost" href={LINKS.github} target="_blank" rel="noopener noreferrer">
                 Read the source →
+              </a>
+              <a className="v3-ghost v3-ghost-brass" href={LINKS.designPartner}>
+                Become a design partner →
               </a>
             </div>
             <div style={{ marginBottom: 34 }}>
@@ -396,7 +403,7 @@ export default function LandingV3() {
                 }}
               >
                 <span style={{ font: "500 11px/1 var(--font-jbmono)", letterSpacing: "0.18em", color: dim(0.45) }}>
-                  LIVE RUN · guard(budget_usd=0.90, detect_loops=True)
+                  OBSERVE · guard(app) · <span style={{ color: dim(0.7) }}>example profile</span>
                 </span>
                 <button
                   type="button"
@@ -417,63 +424,84 @@ export default function LandingV3() {
                 </button>
               </div>
               <div style={{ padding: "clamp(20px,2.6vw,30px) clamp(18px,2.2vw,28px) clamp(18px,2.2vw,26px)" }}>
-                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16, flexWrap: "wrap", marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16, flexWrap: "wrap", marginBottom: 18 }}>
                   <div>
                     <div style={{ font: "500 10.5px/1 var(--font-jbmono)", letterSpacing: "0.22em", color: dim(0.4), marginBottom: 10 }}>
-                      SPENT THIS RUN
+                      RUNS OBSERVED
                     </div>
                     <div
                       style={{
                         font: "700 clamp(44px,4.6vw,62px)/1 var(--font-display)",
                         letterSpacing: "-0.03em",
                         fontVariantNumeric: "tabular-nums",
-                        color: done ? "#e8bb45" : "#f2f0e9",
-                        transition: "color .3s ease",
+                        color: "#f2f0e9",
                       }}
                     >
-                      ${disp.toFixed(2)}
+                      {obsRuns}
                     </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div style={{ font: "500 10.5px/1 var(--font-jbmono)", letterSpacing: "0.22em", color: dim(0.4), marginBottom: 10 }}>
-                      HARD CAP
+                      SUGGESTED CAP
                     </div>
-                    <div style={{ font: "700 clamp(26px,2.6vw,34px)/1.2 var(--font-display)", letterSpacing: "-0.02em", color: dim(0.8) }}>
-                      $0.90
+                    <div
+                      style={{
+                        font: "700 clamp(26px,2.6vw,34px)/1.2 var(--font-display)",
+                        letterSpacing: "-0.02em",
+                        color: suggested ? "#e8bb45" : dim(0.32),
+                        transition: "color .3s ease",
+                      }}
+                    >
+                      {suggested ? `$${OBS.budget.toFixed(2)}` : "—"}
                     </div>
                   </div>
                 </div>
-                <div className="v3-bar-track">
-                  <div className="v3-bar-fill" style={{ width: `${spentPct}%` }} />
+                {/* cost distribution the observe run builds up — a fat tail with one runaway */}
+                <div className="v3-obs-hist" style={{ gridTemplateColumns: `repeat(${OBS_HIST.length},1fr)` }}>
+                  <div className="v3-obs-p95" style={{ left: "80%", opacity: learned ? 1 : 0 }}>
+                    <span>p95 · cap here</span>
+                  </div>
+                  {OBS_HIST.map((h, i) => (
+                    <div
+                      key={i}
+                      className={"v3-obs-bar" + (i === OBS_HIST.length - 1 ? " tail" : "")}
+                      style={{ height: `${h * obsProgress * 100}%` }}
+                    />
+                  ))}
                 </div>
-                {HOPS.map((h, i) => {
-                  const shown = i < step;
-                  const tone = shown ? (h.loop ? "#e8bb45" : "#f2f0e9") : dim(0.5);
-                  return (
-                    <div key={h.hop} className="v3-hop" style={{ opacity: shown ? 1 : 0.13 }}>
-                      <span style={{ color: tone }}>{h.hop}</span>
-                      <span style={{ color: dim(0.45), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {h.note}
-                      </span>
-                      <span style={{ textAlign: "right", color: tone, fontVariantNumeric: "tabular-nums" }}>
-                        {h.amt}
-                      </span>
+                <div style={{ font: "400 10.5px/1 var(--font-jbmono)", letterSpacing: "0.05em", color: dim(0.34), textAlign: "right", marginBottom: 18 }}>
+                  cost per run · low → high · <span style={{ color: "#e8bb45" }}>▮ runaway</span>
+                </div>
+                {/* the profile resolves at "learn" */}
+                <div className="v3-obs-chips" style={{ opacity: learned ? 1 : 0.16 }}>
+                  {([["MEDIAN", OBS.median], ["P95", OBS.p95], ["MAX", OBS.max]] as [string, number][]).map(
+                    ([label, v], i) => (
+                      <div key={label} className="v3-obs-chip">
+                        <span>{label}</span>
+                        <b style={{ color: i === 2 ? "#e8bb45" : "#f2f0e9" }}>${v.toFixed(2)}</b>
+                      </div>
+                    ),
+                  )}
+                </div>
+                {/* the suggestion prints at "suggest" — mirrors `breakerbox observe-report` */}
+                {suggested ? (
+                  <div className="v3-obs-suggest">
+                    <div style={{ font: "400 clamp(11.5px,1.05vw,13px)/1.6 var(--font-jbmono)", color: "#e8bb45", wordBreak: "break-word" }}>
+                      guard(app, budget_usd={OBS.budget.toFixed(2)}, on_trip=&quot;pause&quot;)
                     </div>
-                  );
-                })}
-                {done && (
-                  <div className="v3-trip">
-                    <span style={{ flex: "none", color: "#d4a017" }}>⏻</span>
-                    <span>
-                      BudgetPaused: tripped at cap · state checkpointed · resume() to continue
-                      <span className="v3-caret" />
-                    </span>
+                    <div style={{ marginTop: 9, font: "400 11.5px/1.6 var(--font-jbmono)", color: dim(0.6) }}>
+                      a ${OBS.budget.toFixed(2)} cap would have prevented{" "}
+                      <span style={{ color: "#f2f0e9" }}>${OBS.prevented}</span> across {OBS.runs} runs —
+                      mostly one runaway.
+                    </div>
+                    <span className="v3-accept">✓ ACCEPT THE CAP</span>
+                  </div>
+                ) : (
+                  <div style={{ marginTop: 16, font: "400 11.5px/1.7 var(--font-jbmono)", color: dim(0.38) }}>
+                    observe mode · no budget · <span style={{ color: dim(0.6) }}>nothing enforced yet</span>
+                    <span className="v3-caret" />
                   </div>
                 )}
-                <div style={{ marginTop: 16, font: "400 11.5px/1.7 var(--font-jbmono)", color: dim(0.38) }}>
-                  unguarded, this run keeps going: <span style={{ color: dim(0.6) }}>$12.63</span> · tripped at{" "}
-                  <span style={{ color: "#e8bb45" }}>$0.82</span>
-                </div>
               </div>
             </div>
           </div>
@@ -862,8 +890,8 @@ export default function LandingV3() {
           <button type="button" className="v3-cta" style={{ padding: "18px 30px", borderRadius: 15, fontSize: "15.5px" }} onClick={copyInstall}>
             {copyLabel}
           </button>
-          <a className="v3-ghost" href={LINKS.github} target="_blank" rel="noopener noreferrer" style={{ padding: "18px 30px", borderRadius: 15 }}>
-            Star on GitHub
+          <a className="v3-ghost v3-ghost-brass" href={LINKS.designPartner} style={{ padding: "18px 30px", borderRadius: 15 }}>
+            Become a design partner →
           </a>
         </div>
         <div style={{ display: "inline-block", textAlign: "left", borderRadius: 20 }} className="v3-card">

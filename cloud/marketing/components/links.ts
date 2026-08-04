@@ -16,6 +16,8 @@ export const LINKS = {
   privacy: "/privacy",
   github: "https://github.com/Amitcoh1/agentbreaker",
   email: `mailto:${EMAIL}?subject=Breakerbox`,
+  // Phase-1 conversion goal: design partners who flip observe → enforcement on real spend.
+  designPartner: `mailto:${EMAIL}?subject=${encodeURIComponent("Breakerbox — design partner")}`,
   pypi: "https://pypi.org/project/breakerbox/",
   roadmap: "https://github.com/Amitcoh1/agentbreaker/blob/main/ROADMAP.md",
   changelog: "https://github.com/Amitcoh1/agentbreaker/releases",

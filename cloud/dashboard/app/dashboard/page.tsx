@@ -65,7 +65,7 @@ export default async function Overview() {
           <h1 className="text-lg font-semibold">Overview</h1>
           <p className="text-sm text-muted">Cost across your guarded agent workflows.</p>
         </header>
-        <EmptyState />
+        <EmptyState observe />
       </div>
     );
   }

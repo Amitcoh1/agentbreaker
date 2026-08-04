@@ -9,15 +9,20 @@ limiter.
 
 ## The problem, in one incident
 
-A team ran a four-agent LangChain market-research pipeline. Two agents entered a request ping-pong loop
-in production. It ran for **11 days**. The bill was **$47,000**. Nobody noticed until it was over.
+In a widely-shared account, engineer Teja Kusireddy
+[described](https://todatabeyond.substack.com/p/we-spent-47000-running-ai-agents) a four-agent
+LangChain market-research pipeline whose two agents entered a request ping-pong loop in production. It
+ran for **11 days**. The bill was **$47,000**. Nobody noticed until it was over. (A first-person
+report, not an audited postmortem — but a textbook shape of the failure.)
 
 Every company scaling agents has a smaller version of this story: runs that should cost $0.40 costing
 $12, multiplied across thousands of executions, invisible until the invoice.
 
 ## Four findings
 
-Stanford's Digital Economy Lab studied agentic workloads. Four results should change how you budget:
+Stanford's Digital Economy Lab studied agentic coding workloads
+([*How Do AI Agents Spend Your Money?*](https://arxiv.org/abs/2604.22750), Brynjolfsson et al.). Four
+results should change how you budget:
 
 1. **Agentic tasks consume ~1000× the tokens of chat.** An agent that plans, calls tools, reflects, and
    retries burns three orders of magnitude more than a single chat turn. Your chat-era cost intuition is

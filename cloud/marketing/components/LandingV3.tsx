@@ -499,8 +499,8 @@ export default function LandingV3() {
               </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "clamp(32px,4.6vw,64px)", paddingTop: 36, borderTop: `1px solid ${dim(0.1)}` }}>
                 {[
-                  { to: 47000, prefix: "$", decimals: 0, label: "IN 11 DAYS" },
-                  { to: 1.67, suffix: "B", decimals: 2, label: "TOKENS IN 5 HOURS" },
+                  { to: 47000, prefix: "$", decimals: 0, label: "REPORTED · 11 DAYS" },
+                  { to: 30, suffix: "×", decimals: 0, label: "COST VARIANCE, SAME TASK" },
                 ].map((s) => (
                   <div key={s.label}>
                     <CountUp
